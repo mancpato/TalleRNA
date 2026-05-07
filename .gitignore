@@ -3,6 +3,11 @@
 # Archivos específicos
 PROPUESTA_MODULARIZACION.md
 PROPUESTA_MODULARIZACION.pdf
+split/*.*
+split/css
+split/css/*.*
+split/js
+split/js/*.*
 
 # Sistema operativo
 .DS_Store

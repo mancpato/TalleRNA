@@ -60,20 +60,6 @@
     #barra-overlay input[type="range"] { cursor: pointer; width: 80px; }
     #barra-overlay label { display: inline-flex; align-items: center; gap: 5px; }
 
-    #logo-tallerna {
-      position: absolute;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-family: monospace;
-      font-size: 20px;
-      font-weight: bold;
-      pointer-events: none;
-      user-select: none;
-      white-space: nowrap;
-      z-index: 0;
-    }
-    #logo-tallerna .rna { color: #7B52D4; }
     #barra-overlay > label,
     #barra-overlay > button,
     #barra-overlay > select {
@@ -127,7 +113,7 @@
 // La idea de este proyecto es crear un visualizador interactivo de múltiples de redes neuronales
 // entrenándose simultáneamente (un "enjambre"), para entender cómo diferentes factores afectan
 // el proceso de entrenamiento y la forma de las fronteras de decisión.
-// Esta es la Etapa -1, que crea las estructuras básicas de la interfaz y el motor de renderizado, 
+// Esta es la Etapa 1, que crea las estructuras básicas de la interfaz y el motor de renderizado, 
 // con datos generados sintéticamente.
 
 // ============================================================================
@@ -145,7 +131,7 @@ const VERTICAL_RATIO = 0.65; // fila superior / total
 const HORIZONTAL_RATIO = 0.5; // columna izquierda / total
 
 // ============================================================================
-// PALETAS DE COLOR (§11)
+// PALETAS DE COLOR
 // ============================================================================
 
 let PALETAS = {};
@@ -194,7 +180,7 @@ function inicializarPaletas() {
 }
 
 // ============================================================================
-// VARIABLES GLOBALES (§15)
+// VARIABLES GLOBALES 
 // ============================================================================
 
 // Configuración global
@@ -304,9 +290,14 @@ function panelCoords(id, xNorm, yNorm) {
 }
 
 // ============================================================================
-// MÁQUINA DE ESTADOS (§12, §0.2)
+// MÁQUINA DE ESTADOS
 // ============================================================================
-
+// Estados: 
+//  'IDLE' (reposo, sin entrenamiento), 
+//  'RUNNING' (entrenamiento en curso), 
+//  'PAUSED' (entrenamiento detenido pero no reiniciado), 
+//  'CONVERGED' (todos los modelos convergieron o divergen), 
+//  'ERROR' (estado de error)
 function transicionar(nuevoEstado) {
   if (nuevoEstado !== estado) {
     console.log(`[Estado] ${estado} → ${nuevoEstado}`);
@@ -323,7 +314,8 @@ function iniciarEntrenamiento() {
   // 2B: fijar referencia de escala para Panel 2 (J máximo en época 0)
   if (modelos && modelos.length > 0) {
     const vals = modelos.map(m => {
-      if (m.historial && m.historial.length > 0) return m.historial[0].J_train;
+      if (m.historial && m.historial.length > 0) 
+        return m.historial[0].J_train;
       return 1.0;
     });
     J_max_epoca0 = Math.max(...vals, 0.01);
@@ -382,7 +374,7 @@ function resetear() {
 }
 
 // ============================================================================
-// SISTEMA DE NOTIFICACIONES (§0.4, §9.4)
+// SISTEMA DE NOTIFICACIONES
 // ============================================================================
 
 function notificar(texto) {
@@ -399,10 +391,10 @@ function dibujarNotificacion() {
 
   if (!estaActiva) return;
 
-  const r3 = panelRect(3);
+  const r3 = panelRect(3); //
   const margen = 8;
-  const x = r3.x + margen;
-  const y = r3.y + r3.h - 65;
+  const x = r3.x + margen; // margen lateral para no pegar el texto al borde
+  const y = r3.y + r3.h - 105; // px desde abajo 
   const w = r3.w - 2 * margen;
   const h = 24;
 
@@ -432,30 +424,6 @@ function dibujarBarraGlobal() {
   stroke(200);
   strokeWeight(1);
   rect(0, 0, windowWidth, h);
-
-  // Logo TalleRNA — centrado en la barra
-  textAlign(CENTER, CENTER);
-  const cy = TOOLBAR_HEIGHT / 2;
-
-  textSize(22);
-  textStyle(BOLD);
-  fill(60);
-  noStroke();
-  const anchoTaller = textWidth('Taller');
-
-  fill(123, 82, 212);
-  const anchoRNA = textWidth('RNA');
-
-  const anchoTotal = anchoTaller + anchoRNA;
-  const xInicio = windowWidth / 2 - anchoTotal / 2;
-
-  fill(60); noStroke();
-  text('Taller', xInicio + anchoTaller / 2, cy);
-
-  fill(123, 82, 212);
-  text('RNA', xInicio + anchoTaller + anchoRNA / 2, cy);
-
-  textStyle(NORMAL);
 
   // Texto de arquitectura (lado derecho)
   fill(100);
@@ -496,7 +464,7 @@ function dibujarPestanas() {
 
     // Texto
     fill(0);
-    textSize(11);
+    textSize(12);
     textAlign(CENTER, CENTER);
     text(p.label, x + ancho_pestaña / 2, y + h / 2);
 
@@ -635,7 +603,7 @@ function obtenerEtiquetaBotón() {
 // ============================================================================
 
 function calcularGridPrediccion(modelo, resolucion) {
-  // Evalúa el modelo en una grilla resolucion×resolucion que cubre [-1,1]²
+  // Evalúa el modelo en un rectángulo resolucion×resolucion que cubre [-1,1]²
   // Retorna Float32Array de longitud resolucion*resolucion con valores ŷ∈(0,1)
   // Orden: fila i (x2 decreciente) × columna j (x1 creciente), para coincidir con imagen
   const n = resolucion;
@@ -961,7 +929,8 @@ function dibujarDatosPanel1() {
 // ============================================================================
 // PANEL 2 — Historial de pérdida
 // ============================================================================
-
+// Aquí la idea es mostrar una gráfica de J_train (y opcionalmente J_test) 
+// a lo largo de las épocas para cada modelo.
 function _panel2PlotArea() {
   // Devuelve { x, y, w, h } del área de trazado dentro de Panel 2
   const r = panelRect(2);
@@ -1112,7 +1081,8 @@ function dibujarHistorialPanel2() {
   const campo = modoAccPanel2 ? 'accuracy_test' : 'J_train';
   for (let i = 0; i < modelos.length; i++) {
     const m = modelos[i];
-    if (!m.historial || m.historial.length < 2) continue;
+    if (!m.historial || m.historial.length < 2) 
+      continue;
 
     const c = m.color;
     let alfa;
@@ -1127,7 +1097,8 @@ function dibujarHistorialPanel2() {
     beginShape();
     for (let ep = 0; ep < m.historial.length; ep++) {
       const val = m.historial[ep][campo];
-      if (val === undefined || val === null) continue;
+      if (val === undefined || val === null) 
+      continue;
       const x = _epToX(ep, totalEpocas, plot);
       const y = _valToY(val, plot, yMin, yMax);
       vertex(x, y);
@@ -1140,7 +1111,8 @@ function dibujarHistorialPanel2() {
     const campoTest = modoAccPanel2 ? 'accuracy_test' : 'J_test';
     for (let i = 0; i < modelos.length; i++) {
       const m = modelos[i];
-      if (!m.historial || m.historial.length < 2) continue;
+      if (!m.historial || m.historial.length < 2) 
+        continue;
       const c = m.color;
       let alfa = modeloSeleccionado === i ? 200 : modeloHover === i ? 140 : 40;
       stroke(red(c), green(c), blue(c), alfa);
@@ -1150,7 +1122,8 @@ function dibujarHistorialPanel2() {
       beginShape();
       for (let ep = 0; ep < m.historial.length; ep++) {
         const val = m.historial[ep][campoTest];
-        if (val === undefined || val === null) continue;
+        if (val === undefined || val === null) 
+          continue;
         const x = _epToX(ep, totalEpocas, plot);
         const y = _valToY(val, plot, yMin, yMax);
         vertex(x, y);
@@ -1165,8 +1138,13 @@ function dibujarHistorialPanel2() {
   _dibujarTogglesPanel2(r, plot);
 }
 
+// Botones Lin, Test, J/Acc en la esquina superior derecha del panel
+// Estos botones no son interactivos aquí, solo se dibujan. La interacción se maneja en mousePressed().
+// Su utilidad es cambiar el modo de visualización:
+//  - escala logarítmica, 
+//  -mostrar curvas de test y 
+//  -mostrar J vs Accuracy.
 function _dibujarTogglesPanel2(r, plot) {
-  // Botones Lin, Test, J/Acc en la esquina superior derecha del panel
   const BTN_W = 44, BTN_H = 18, GAP = 6;
   const bY      = r.y + 5;
   const bX_J    = r.x + r.w - 10 - BTN_W;
@@ -1197,14 +1175,15 @@ function _dibujarTogglesPanel2(r, plot) {
 // ============================================================================
 // INTERACCIÓN (Mouse)
 // ============================================================================
-
+// Aquí está la chamba de mayor cuidado.
 function _distMinFrontera(puntos) {
   // Distancia mínima en píxeles del cursor a cualquier punto de la frontera dada
   let minDist = Infinity;
   for (const pt of puntos) {
     const { px, py } = dataToPanel1(pt.x1, pt.x2);
     const d = Math.hypot(mouseX - px, mouseY - py);
-    if (d < minDist) minDist = d;
+    if (d < minDist) 
+      minDist = d;
   }
   return minDist;
 }
@@ -1260,9 +1239,13 @@ function mousePressed(event) {
     let mejorIdx = null;
     let mejorDist = Infinity;
     for (let i = 0; i < modelos.length; i++) {
-      if (!modelos[i].frontera || modelos[i].frontera.length === 0) continue;
+      if (!modelos[i].frontera || modelos[i].frontera.length === 0) 
+        continue;
       const d = _distMinFrontera(modelos[i].frontera);
-      if (d < 8 && d < mejorDist) { mejorDist = d; mejorIdx = i; }
+      if (d < 8 && d < mejorDist) { 
+        mejorDist = d; 
+        mejorIdx = i; 
+      }
     }
 
     if (mejorIdx !== null) {
@@ -1304,14 +1287,19 @@ function mousePressed(event) {
         let mejorIdx = null, mejorDist = 10;
         for (let i = 0; i < modelos.length; i++) {
           const m = modelos[i];
-          if (!m.historial || m.historial.length < 2) continue;
+          if (!m.historial || m.historial.length < 2) 
+            continue;
           for (let ep = 0; ep < m.historial.length; ep++) {
             const val = m.historial[ep][campo];
-            if (val === undefined || val === null) continue;
+            if (val === undefined || val === null) 
+              continue;
             const cx = _epToX(ep, maximoEpocas, plot);
             const cy = _valToY(val, plot, ym2, yx2);
             const d = Math.hypot(mouseX - cx, mouseY - cy);
-            if (d < mejorDist) { mejorDist = d; mejorIdx = i; }
+            if (d < mejorDist) { 
+              mejorDist = d; 
+              mejorIdx = i; 
+            }
           }
         }
         if (mejorIdx !== null) {
@@ -1338,9 +1326,13 @@ function mouseMoved() {
     let mejorIdx = null;
     let mejorDist = Infinity;
     for (let i = 0; i < modelos.length; i++) {
-      if (!modelos[i].frontera || modelos[i].frontera.length === 0) continue;
+      if (!modelos[i].frontera || modelos[i].frontera.length === 0) 
+        continue;
       const d = _distMinFrontera(modelos[i].frontera);
-      if (d < 8 && d < mejorDist) { mejorDist = d; mejorIdx = i; }
+      if (d < 8 && d < mejorDist) { 
+        mejorDist = d; 
+        mejorIdx = i; 
+      }
     }
     modeloHover = mejorIdx;
   } else {
@@ -1355,14 +1347,19 @@ function mouseMoved() {
       if (modelos) {
         for (let i = 0; i < modelos.length; i++) {
           const m = modelos[i];
-          if (!m.historial || m.historial.length < 2) continue;
+          if (!m.historial || m.historial.length < 2) 
+            continue;
           for (let ep = 0; ep < m.historial.length; ep++) {
             const val = m.historial[ep][campo];
-            if (val === undefined || val === null) continue;
+            if (val === undefined || val === null) 
+              continue;
             const cx = _epToX(ep, maximoEpocas, plot);
             const cy = _valToY(val, plot, ym3, yx3);
             const d = Math.hypot(mouseX - cx, mouseY - cy);
-            if (d < mejorDist) { mejorDist = d; mejorIdx = i; }
+            if (d < mejorDist) { 
+              mejorDist = d; 
+              mejorIdx = i; 
+            }
           }
         }
       }
@@ -1427,7 +1424,8 @@ function setup() {
 }
 
 function dibujarResumenPanel4() {
-  if (!modelos || modelos.length === 0) return;
+  if (!modelos || modelos.length === 0) 
+    return;
   const r = panelRect(4);
   const x = r.x + 14;
   let y = r.y + 36;
@@ -1534,6 +1532,8 @@ function draw() {
 // ============================================================================
 // ETAPA 1 — MOTOR MATEMÁTICO
 // ============================================================================
+
+// Comienza la parte divertida y lo que está más trabajado.
 
 // ============================================================================
 // SUBTAREA 1.1: GENERACIÓN DE DATOS Y NORMALIZACIÓN (§3)
@@ -2798,11 +2798,6 @@ function crearOverlayBarra() {
     <button id="btn-semilla">⚄ semilla: ${semillaDatos}</button>
   `;
   document.body.appendChild(div);
-
-  const logo = document.createElement('div');
-  logo.id = 'logo-tallerna';
-  logo.innerHTML = 'Taller<span class="rna">RNA</span>';
-  div.appendChild(logo);
 
   document.getElementById('select-problema').addEventListener('change', function() {
     problema = this.value;

@@ -44,6 +44,21 @@ Red 2→4→1, activación ReLU, optimizador SGD con momento.
 Toda la aleatoriedad usa un generador LCG con semilla explícita
 para garantizar reproducibilidad entre sesiones.
 
+## Organización modular
+
+```text
+/TalleRNA
+├── index.html
+├── css/
+│   └── style.css
+└── js/
+    ├── config.js      (Variables globales y paletas)
+    ├── motor_ml.js    (Matemáticas, red neuronal y datos)
+    ├── ui.js          (Renderizado visual de p5 y constructores del DOM)
+    ├── interaccion.js (Máquina de estados y eventos de mouse)
+    └── main.js        (Bucle principal: setup, draw)
+```
+
 ## Autor
 
 M.A. Norzagaray Cosío — DASC/UABCS

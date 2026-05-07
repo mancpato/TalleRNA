@@ -8,9 +8,15 @@ TalleRNA es un visualizador interactivo de enjambres de redes neuronales, implem
 
 | Archivo | Descripción |
 |---------|-------------|
-| `TalleRNA.html` | Único archivo de código — todo el proyecto vive aquí |
+| `index.html` | Entrada principal — carga CSS y scripts |
+| `css/style.css` | Estilos globales y overlays DOM |
+| `js/config.js` | Variables globales, paletas de color, constantes |
+| `js/motor_ml.js` | Generación de datos, red neuronal, backprop, métricas |
+| `js/ui.js` | Renderizado p5.js, overlays DOM, dibujo de paneles |
+| `js/interaccion.js` | Máquina de estados, eventos de mouse y teclado |
+| `js/main.js` | Bucle principal: setup(), draw(), windowResized() |
 | `TalleRNAspec.md` | Especificación completa del proyecto (fuente de verdad) |
-| `TalleRNA_Plan.md` | Plan de implementación por etapas y subtareas |
+| `TalleRNA_Plan.md` | Plan de implementación por etapas |
 | `PROGRESO.md` | Estado actual, bugs corregidos, próximos pasos |
 
 ## Reglas de desarrollo
