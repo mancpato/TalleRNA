@@ -1,0 +1,25 @@
+# TalleRNA — .gitignore
+
+# Archivos específicos
+PROPUESTA_MODULARIZACION.md
+PROPUESTA_MODULARIZACION.pdf
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (por si acaso)
+node_modules/
+
+# Archivos temporales
+*.tmp
+*.bak
+*.orig

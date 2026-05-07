@@ -1,0 +1,2982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TalleRNA — Visualizador de Enjambre de Redes Neuronales</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: #ffffff;
+    }
+    #p5-container {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Overlay DOM sobre barra global */
+    #barra-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 40px; /* TOOLBAR_HEIGHT — valor fijo para CSS */
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 12px;
+      pointer-events: auto;
+      background: transparent;
+      z-index: 10;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    #barra-overlay select,
+    #barra-overlay button {
+      font-family: monospace;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid #aaa;
+      border-radius: 3px;
+      background: #e8e8e8;
+      padding: 2px 6px;
+    }
+    #barra-overlay select:hover,
+    #barra-overlay button:hover { background: #d0d0d0; }
+    #barra-overlay button:disabled,
+    #barra-overlay select:disabled,
+    #barra-overlay input:disabled { opacity: 0.45; cursor: default; }
+    #barra-overlay input[type="range"] { cursor: pointer; width: 80px; }
+    #barra-overlay label { display: inline-flex; align-items: center; gap: 5px; }
+
+    #logo-tallerna {
+      position: absolute;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-family: monospace;
+      font-size: 20px;
+      font-weight: bold;
+      pointer-events: none;
+      user-select: none;
+      white-space: nowrap;
+      z-index: 0;
+    }
+    #logo-tallerna .rna { color: #7B52D4; }
+    #barra-overlay > label,
+    #barra-overlay > button,
+    #barra-overlay > select {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Overlay DOM sobre Panel 3 */
+    #panel3-overlay {
+      position: absolute;
+      overflow: hidden;
+      padding: 4px 12px 0 12px;
+      box-sizing: border-box;
+      font-size: 12px;
+      background: transparent;
+      pointer-events: auto;
+      z-index: 10;
+    }
+    #panel3-overlay button#btn-principal {
+      width: 100%;
+      padding: 5px 0;
+      font-size: 12px;
+      cursor: pointer;
+      background: #e8e8e8;
+      border: 1px solid #aaa;
+      border-radius: 3px;
+      margin-bottom: 4px;
+    }
+    #panel3-overlay button#btn-principal:hover { background: #d0d0d0; }
+    #panel3-overlay hr.p3-sep {
+      border: none;
+      border-top: 1px solid #ccc;
+      margin: 4px 0;
+    }
+    #panel3-overlay .p3-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 2px;
+    }
+    #panel3-overlay label { display: inline-flex; align-items: center; }
+    #panel3-overlay input[type="range"] { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="p5-container"></div>
+
+  <script>
+// TalleRNA — Visualizador de Enjambre de Redes Neuronales
+//
+// La idea de este proyecto es crear un visualizador interactivo de múltiples de redes neuronales
+// entrenándose simultáneamente (un "enjambre"), para entender cómo diferentes factores afectan
+// el proceso de entrenamiento y la forma de las fronteras de decisión.
+// Esta es la Etapa -1, que crea las estructuras básicas de la interfaz y el motor de renderizado, 
+// con datos generados sintéticamente.
+
+// ============================================================================
+// CONSTANTES DE CONFIGURACIÓN
+// ============================================================================
+
+const TOOLBAR_HEIGHT = 40;
+const TAB_HEIGHT = 32;
+const BORDER_COLOR = '#cccccc';
+const BORDER_WIDTH = 1;
+const PANEL_BG = '#ffffff';
+
+// Proporciones de layout
+const VERTICAL_RATIO = 0.65; // fila superior / total
+const HORIZONTAL_RATIO = 0.5; // columna izquierda / total
+
+// ============================================================================
+// PALETAS DE COLOR (§11)
+// ============================================================================
+
+let PALETAS = {};
+
+function inicializarPaletas() {
+  // Tasa de aprendizaje — gradiente continuo (§11.1)
+  PALETAS.eta = {
+    azulVioleta: color('#7B52D4'),  // hsl(250, 70%, 55%)
+    naranja: color('#FF8C1A')       // hsl(30, 100%, 55%)
+  };
+
+  // Inicialización — color fijo por distribución (§11.2)
+  PALETAS.init = {
+    uniforme: color('#378ADD'),
+    normal: color('#1D9E75'),
+    xavier: color('#BA7517'),
+    he: color('#534AB7')
+  };
+
+  // Activación — color fijo por función (§11.3)
+  PALETAS.activacion = {
+    relu: color('#185FA5'),
+    sigmoid: color('#D85A30'),
+    tanh: color('#1D9E75'),
+    lineal: color('#888780'),
+    leaky_relu: color('#534AB7')
+  };
+
+  // Dropout — gradiente por tasa (§11.4)
+  PALETAS.dropout = {
+    naranjaOscuro: color('#B85A1A'),  // hsl(20, 80%, 40%)
+    azul: color('#2277BB')            // hsl(210, 70%, 45%)
+  };
+
+  // Topología — color por complejidad (§11.5)
+  PALETAS.topologia = [
+    color('#888780'),  // T0
+    color('#B5D4F4'),  // T1
+    color('#85B7EB'),  // T2
+    color('#378ADD'),  // T3
+    color('#97C459'),  // T4
+    color('#639922'),  // T5
+    color('#3B6D11'),  // T6
+    color('#1D9E75')   // T7
+  ];
+}
+
+// ============================================================================
+// VARIABLES GLOBALES (§15)
+// ============================================================================
+
+// Configuración global
+let problema = 'xor';
+let nivelRuido = 0;
+let trainRatio = 0.8;
+let semillaDatos = 4721;
+let esTipoClasif = true;
+
+// Datos
+let datosTrain = [];
+let datosTest = [];
+
+// Gráfico offscreen del mapa de predicción (Panel 1, capa 1)
+let gfxMapa = null;
+
+// Modelo activo para el mapa de predicción (se reusa en windowResized)
+let modeloMapa = null;
+
+// Puntos de frontera de decisión del modelo de prueba (Panel 1, capa 4)
+let fronteraPrueba = [];
+
+// Módulo activo
+let moduloActivo = 'eta';
+
+// Estado de la máquina de estados
+let estado = 'IDLE';
+
+// Parámetros de animación
+let velocidad = 'normal';
+let maximoEpocas = 200;
+let mostrarCurvasTest = false;
+
+// Enjambre
+let modelos = [];
+let modeloReferencia = null;
+let modeloSeleccionado = null;
+let modeloHover = null;
+
+// Notificación
+let notificacion = { texto: '', frameInicio: -200, duracion: 120 };
+
+// FIX 3: rendimiento — índice rotativo de actualización de fronteras
+let fronteraUpdateIdx = 0;
+// FIX 3: debounce para sliders de eta
+let _debounceEta = null;
+
+// Panel 2 — historial de pérdida
+let J_max_epoca0 = 1.0;   // valor de referencia para escala Y (pérdida máxima en época 0)
+let modoLogPanel2 = false; // false = escala lineal, true = escala logarítmica
+let modoAccPanel2 = false; // false = mostrar pérdida J, true = mostrar accuracy
+
+// UI State
+let interfaz = {
+  controlesBarra: {
+    problema: 'espiral',
+    ruido: 0,
+    train: 0.8,
+    semilla: 4721
+  },
+  controlesModulo: {
+    // Se poblará según módulo activo
+  }
+};
+
+// ============================================================================
+// FUNCIONES AUXILIARES DE LAYOUT
+// ============================================================================
+
+function panelRect(id) {
+  // id: 1, 2, 3, 4
+  // Fila superior (1, 2): 65% del alto disponible
+  // Fila inferior (3, 4): 35% del alto disponible
+  // Ambas columnas: 50/50
+
+  const areaX = 0;
+  const areaY = TOOLBAR_HEIGHT + TAB_HEIGHT;
+  const areaW = windowWidth;
+  const areaH = windowHeight - TOOLBAR_HEIGHT - TAB_HEIGHT;
+
+  const filaAlturaSuper = areaH * VERTICAL_RATIO;
+  const filaAlturaInf = areaH * (1 - VERTICAL_RATIO);
+  const colAncho = areaW * HORIZONTAL_RATIO;
+
+  switch (id) {
+    case 1:
+      return { x: areaX, y: areaY, w: colAncho, h: filaAlturaSuper };
+    case 2:
+      return { x: areaX + colAncho, y: areaY, w: areaW - colAncho, h: filaAlturaSuper };
+    case 3:
+      return { x: areaX, y: areaY + filaAlturaSuper, w: colAncho, h: filaAlturaInf };
+    case 4:
+      return { x: areaX + colAncho, y: areaY + filaAlturaSuper, w: areaW - colAncho, h: filaAlturaInf };
+  }
+  return null;
+}
+
+function panelCoords(id, xNorm, yNorm) {
+  // Mapea coordenadas normalizadas [0, 1] a píxeles dentro del panel
+  // (0, 0) → esquina superior izquierda
+  // (1, 1) → esquina inferior derecha
+  const r = panelRect(id);
+  return {
+    px: r.x + xNorm * r.w,
+    py: r.y + yNorm * r.h
+  };
+}
+
+// ============================================================================
+// MÁQUINA DE ESTADOS (§12, §0.2)
+// ============================================================================
+
+function transicionar(nuevoEstado) {
+  if (nuevoEstado !== estado) {
+    console.log(`[Estado] ${estado} → ${nuevoEstado}`);
+    estado = nuevoEstado;
+  }
+}
+
+function enEstado(...estados) {
+  return estados.includes(estado);
+}
+
+function iniciarEntrenamiento() {
+  console.log('[Transición] iniciarEntrenamiento()');
+  // 2B: fijar referencia de escala para Panel 2 (J máximo en época 0)
+  if (modelos && modelos.length > 0) {
+    const vals = modelos.map(m => {
+      if (m.historial && m.historial.length > 0) return m.historial[0].J_train;
+      return 1.0;
+    });
+    J_max_epoca0 = Math.max(...vals, 0.01);
+  } else {
+    J_max_epoca0 = 1.0;
+  }
+  // Modelo de referencia: el de menor J_test en época 0
+  let mejorJ = Infinity, mejorRef = 0;
+  for (let i = 0; i < modelos.length; i++) {
+    const h0 = modelos[i].historial;
+    if (h0 && h0.length > 0 && h0[0].J_test < mejorJ) {
+      mejorJ = h0[0].J_test;
+      mejorRef = i;
+    }
+  }
+  modeloReferencia = mejorRef;
+  transicionar('RUNNING');
+  actualizarUIEstado();
+  notificar('Entrenamiento iniciado');
+}
+
+function detener() {
+  console.log('[Transición] detener()');
+  transicionar('PAUSED');
+  actualizarUIEstado();
+}
+
+function continuar() {
+  console.log('[Transición] continuar()');
+  transicionar('RUNNING');
+  actualizarUIEstado();
+  notificar('Entrenamiento reanudado');
+}
+
+function converger() {
+  console.log('[Transición] converger()');
+  transicionar('CONVERGED');
+  actualizarUIEstado();
+}
+
+function reiniciar() {
+  console.log('[Transición] reiniciar()');
+  transicionar('IDLE');
+  actualizarUIEstado();
+  modeloReferencia = null;
+  initEnjambre();
+  notificar('Enjambre reiniciado');
+}
+
+function resetear() {
+  console.log('[Transición] resetear()');
+  transicionar('IDLE');
+  actualizarUIEstado();
+  modeloReferencia = null;
+  initEnjambre();
+}
+
+// ============================================================================
+// SISTEMA DE NOTIFICACIONES (§0.4, §9.4)
+// ============================================================================
+
+function notificar(texto) {
+  notificacion = {
+    texto: texto,
+    frameInicio: frameCount,
+    duracion: 120
+  };
+  console.log(`[Notificación] ${texto}`);
+}
+
+function dibujarNotificacion() {
+  const estaActiva = frameCount - notificacion.frameInicio < notificacion.duracion;
+
+  if (!estaActiva) return;
+
+  const r3 = panelRect(3);
+  const margen = 8;
+  const x = r3.x + margen;
+  const y = r3.y + r3.h - 65;
+  const w = r3.w - 2 * margen;
+  const h = 24;
+
+  // Fondo y borde
+  fill(255, 248, 225, 0.9 * 255);
+  stroke(200, 200, 200);
+  strokeWeight(1);
+  rectMode(CORNER);
+  rect(x, y, w, h, 4);
+
+  // Texto
+  fill(85, 85, 85);
+  textAlign(LEFT, CENTER);
+  textSize(11);
+  text(notificacion.texto, x + 8, y + h / 2);
+}
+
+// ============================================================================
+// INTERFAZ GRÁFICA
+// ============================================================================
+
+function dibujarBarraGlobal() {
+  const h = TOOLBAR_HEIGHT;
+
+  // Fondo
+  fill(245, 245, 245);
+  stroke(200);
+  strokeWeight(1);
+  rect(0, 0, windowWidth, h);
+
+  // Logo TalleRNA — centrado en la barra
+  textAlign(CENTER, CENTER);
+  const cy = TOOLBAR_HEIGHT / 2;
+
+  textSize(22);
+  textStyle(BOLD);
+  fill(60);
+  noStroke();
+  const anchoTaller = textWidth('Taller');
+
+  fill(123, 82, 212);
+  const anchoRNA = textWidth('RNA');
+
+  const anchoTotal = anchoTaller + anchoRNA;
+  const xInicio = windowWidth / 2 - anchoTotal / 2;
+
+  fill(60); noStroke();
+  text('Taller', xInicio + anchoTaller / 2, cy);
+
+  fill(123, 82, 212);
+  text('RNA', xInicio + anchoTaller + anchoRNA / 2, cy);
+
+  textStyle(NORMAL);
+
+  // Texto de arquitectura (lado derecho)
+  fill(100);
+  textSize(12);
+  textAlign(RIGHT, CENTER);
+  text('2→4→1 · ReLU · SGD+mom', windowWidth - 12, h / 2);
+}
+
+function dibujarPestanas() {
+  const y = TOOLBAR_HEIGHT;
+  const h = TAB_HEIGHT;
+
+  const pestanas = [
+    { label: 'Tasa de aprendizaje', id: 'eta' },
+    { label: 'Inicialización', id: 'init' },
+    { label: 'Activación', id: 'activacion' },
+    { label: 'Dropout', id: 'dropout' },
+    { label: 'Topología', id: 'topologia' }
+  ];
+
+  let x = 8;
+  const ancho_pestaña = 140;
+
+  for (let i = 0; i < pestanas.length; i++) {
+    const p = pestanas[i];
+    const esActiva = p.id === moduloActivo;
+
+    // Fondo de pestaña
+    if (esActiva) {
+      fill(200, 200, 255);
+    } else {
+      fill(230, 230, 230);
+    }
+
+    stroke(150);
+    strokeWeight(1);
+    rect(x, y, ancho_pestaña, h);
+
+    // Texto
+    fill(0);
+    textSize(11);
+    textAlign(CENTER, CENTER);
+    text(p.label, x + ancho_pestaña / 2, y + h / 2);
+
+    x += ancho_pestaña + 2;
+  }
+}
+
+function dibujarPaneles() {
+  // Panel 1
+  let r1 = panelRect(1);
+  dibujarPanel(1, 'PANEL 1: Espacio de salida', r1);
+
+  // Panel 2
+  let r2 = panelRect(2);
+  dibujarPanel(2, 'PANEL 2: Historial de pérdida', r2);
+
+  // Panel 3
+  let r3 = panelRect(3);
+  dibujarPanel(3, 'PANEL 3: Controles del módulo', r3);
+
+  // Panel 4
+  let r4 = panelRect(4);
+  dibujarPanel(4, 'PANEL 4: Estadísticas', r4);
+}
+
+function dibujarPanel(id, titulo, r) {
+  // Fondo
+  fill(PANEL_BG);
+  stroke(BORDER_COLOR);
+  strokeWeight(BORDER_WIDTH);
+  rectMode(CORNER);
+  rect(r.x, r.y, r.w, r.h);
+
+  // Título
+  fill(100);
+  textSize(11);
+  textAlign(LEFT, TOP);
+  text(titulo, r.x + 8, r.y + 6);
+
+  // Línea de separación bajo título
+  stroke(BORDER_COLOR);
+  strokeWeight(BORDER_WIDTH);
+  line(r.x, r.y + 24, r.x + r.w, r.y + 24);
+}
+
+function dibujarControlesPanel3() {
+  // Los controles de configuración están en el overlay DOM (#panel3-overlay).
+  // Aquí solo dibujamos los círculos del enjambre en la zona inferior del Panel 3.
+  if (!modelos || modelos.length === 0) return;
+
+  const r3 = panelRect(3);
+  const DIAM   = 10;
+  const SEP    = 48;   // espacio suficiente para etiquetas η
+  const totalW = modelos.length * SEP - (SEP - DIAM);
+  const cirX0  = r3.x + (r3.w - totalW) / 2;
+  const cirY   = r3.y + r3.h - 40; // subido 12px para dar sitio a las etiquetas
+
+  for (let i = 0; i < modelos.length; i++) {
+    const m  = modelos[i];
+    const cx = cirX0 + i * SEP;
+    const c  = m.color;
+
+    // Siempre: círculo con el color propio del modelo
+    fill(red(c), green(c), blue(c));
+    noStroke();
+    ellipse(cx, cirY, DIAM);
+
+    // Indicador de estado superpuesto
+    noFill();
+    if (m.estado === 'convergido') {
+      stroke(46, 204, 113); strokeWeight(2);
+      ellipse(cx, cirY, DIAM + 5);
+    } else if (m.estado === 'divergente') {
+      stroke(226, 75, 74); strokeWeight(2);
+      ellipse(cx, cirY, DIAM + 5);
+      const d = DIAM * 0.38;
+      stroke(226, 75, 74); strokeWeight(1.5);
+      line(cx - d, cirY - d, cx + d, cirY + d);
+      line(cx + d, cirY - d, cx - d, cirY + d);
+    } else if (m.estado === 'no_convergido') {
+      stroke(150); strokeWeight(1.5);
+      ellipse(cx, cirY, DIAM + 5);
+    }
+
+    // Seleccionado/hover: anillo exterior encima de todo
+    if (modeloSeleccionado === i) {
+      noFill(); stroke(30); strokeWeight(2);
+      ellipse(cx, cirY, DIAM + 9);
+    } else if (modeloHover === i) {
+      noFill(); stroke(100); strokeWeight(1);
+      ellipse(cx, cirY, DIAM + 7);
+    }
+
+    // Métrica encima del círculo
+    noStroke(); textSize(12); textAlign(CENTER, BOTTOM);
+    if (m.historial && m.historial.length > 0) {
+      const ultimo = m.historial[m.historial.length - 1];
+      let metrica;
+      if (esTipoClasif && ultimo.accuracy_test !== null &&
+          ultimo.accuracy_test !== undefined) {
+        metrica = (ultimo.accuracy_test * 100).toFixed(0) + '%';
+        const acc = ultimo.accuracy_test;
+        fill(acc > 0.75 ? color(46, 180, 90) :
+             acc > 0.50 ? color(200, 160, 0) : color(160));
+      } else if (ultimo.J_test !== undefined) {
+        metrica = 'J=' + ultimo.J_test.toFixed(3);
+        fill(120);
+      } else {
+        metrica = '';
+        fill(120);
+      }
+      if (metrica) text(metrica, cx, cirY - DIAM/2 - 8);
+    }
+
+    // Etiqueta η debajo del círculo
+    noStroke();
+    fill(80);
+    textSize(12);
+    textAlign(CENTER, TOP);
+    text(m.eta.toFixed(3), cx, cirY + DIAM/2 + 6);
+  }
+}
+
+function obtenerEtiquetaBotón() {
+  switch (estado) {
+    case 'IDLE': return '[ Entrenar enjambre ]';
+    case 'RUNNING': return '[ Detener ]';
+    case 'PAUSED': return '[ Continuar ]';
+    case 'CONVERGED': return '[ Reiniciar ]';
+    default: return '[ Entrenar enjambre ]';
+  }
+}
+
+// ============================================================================
+// SUBTAREA 2.2 — MAPA DE PREDICCIÓN DE FONDO
+// ============================================================================
+
+function calcularGridPrediccion(modelo, resolucion) {
+  // Evalúa el modelo en una grilla resolucion×resolucion que cubre [-1,1]²
+  // Retorna Float32Array de longitud resolucion*resolucion con valores ŷ∈(0,1)
+  // Orden: fila i (x2 decreciente) × columna j (x1 creciente), para coincidir con imagen
+  const n = resolucion;
+  const grid = new Float32Array(n * n);
+
+  // Construir batch completo de puntos de la grilla
+  const batch = [];
+  for (let i = 0; i < n; i++) {
+    const x2 = 1 - (i / (n - 1)) * 2; // 1 → -1 (fila 0 = x2=1, fila n-1 = x2=-1)
+    for (let j = 0; j < n; j++) {
+      const x1 = -1 + (j / (n - 1)) * 2; // -1 → 1
+      batch.push([x1, x2]);
+    }
+  }
+
+  const fwd = forward(modelo, batch, false);
+  const salidaCapa = fwd.activaciones[fwd.activaciones.length - 1];
+  for (let k = 0; k < n * n; k++) {
+    grid[k] = salidaCapa[k][0];
+  }
+  return grid;
+}
+
+function renderizarMapaPrediccion(grid, resolucion) {
+  // Crea un createGraphics del tamaño exacto del plot area de Panel 1
+  const p = _panel1PlotArea();
+  const gfx = createGraphics(Math.floor(p.w), Math.floor(p.h));
+  gfx.clear();
+  gfx.noStroke();
+
+  const n = resolucion;
+  const cellW = p.w / n;
+  const cellH = p.h / n;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const yhat = grid[i * n + j];
+      // Confianza: 0 en el límite de decisión, 1 en los extremos
+      const confianza = Math.abs(yhat - 0.5) * 2;
+      const alfa = confianza * 180; // máx 180/255 ≈ 70% de opacidad
+
+      if (yhat < 0.5) {
+        // clase 0 → azul tenue
+        gfx.fill(75, 139, 190, alfa);
+      } else {
+        // clase 1 → naranja tenue
+        gfx.fill(232, 130, 90, alfa);
+      }
+
+      const px = j * cellW;
+      const py = i * cellH;
+      gfx.rect(px, py, cellW + 1, cellH + 1); // +1 para evitar huecos
+    }
+  }
+
+  return gfx;
+}
+
+function renderizarMapa(modelo) {
+  // Recalcula grid, gfxMapa y fronteraPrueba para el modelo dado.
+  // Llamar en setup() y en windowResized() tras resizeCanvas().
+  const grid = calcularGridPrediccion(modelo, 50);
+  gfxMapa = renderizarMapaPrediccion(grid, 50);
+  fronteraPrueba = calcularFrontera(grid, 50);
+}
+
+function dibujarMapaPanel1() {
+  if (!gfxMapa) return;
+  const p = _panel1PlotArea();
+  image(gfxMapa, p.x, p.y, p.w, p.h);
+}
+
+// ============================================================================
+// SUBTAREA 2.3 — FRONTERAS DE DECISIÓN
+// ============================================================================
+
+function calcularFrontera(gridPrediccion, resolucion) {
+  // Devuelve array de {x1, x2} en espacio de datos [-1,1]²
+  // Para cada celda, si ŷ cruza 0.5 respecto a un vecino derecho o inferior,
+  // se incluye el punto medio interpolado como punto de frontera.
+  const n = resolucion;
+  const puntos = [];
+
+  const idx = (i, j) => i * n + j;
+
+  // Coordenada de datos para fila i, columna j
+  const toData = (i, j) => ({
+    x1: -1 + (j / (n - 1)) * 2,
+    x2:  1 - (i / (n - 1)) * 2
+  });
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const v = gridPrediccion[idx(i, j)];
+
+      // Vecino derecho
+      if (j + 1 < n) {
+        const vr = gridPrediccion[idx(i, j + 1)];
+        if ((v - 0.5) * (vr - 0.5) < 0) {
+          // Interpolar: t ∈ [0,1] donde cruza 0.5
+          const t = (0.5 - v) / (vr - v);
+          const a = toData(i, j);
+          const b = toData(i, j + 1);
+          puntos.push({
+            x1: a.x1 + t * (b.x1 - a.x1),
+            x2: a.x2 + t * (b.x2 - a.x2)
+          });
+        }
+      }
+
+      // Vecino inferior
+      if (i + 1 < n) {
+        const vd = gridPrediccion[idx(i + 1, j)];
+        if ((v - 0.5) * (vd - 0.5) < 0) {
+          const t = (0.5 - v) / (vd - v);
+          const a = toData(i, j);
+          const b = toData(i + 1, j);
+          puntos.push({
+            x1: a.x1 + t * (b.x1 - a.x1),
+            x2: a.x2 + t * (b.x2 - a.x2)
+          });
+        }
+      }
+    }
+  }
+
+  return puntos;
+}
+
+function _ordenarFrontera(puntos) {
+  if (puntos.length === 0) return puntos;
+  let cx = 0, cy = 0;
+  for (const p of puntos) { cx += p.x1; cy += p.x2; }
+  cx /= puntos.length; cy /= puntos.length;
+  return [...puntos].sort((a, b) => {
+    const angA = Math.atan2(a.x2 - cy, a.x1 - cx);
+    const angB = Math.atan2(b.x2 - cy, b.x1 - cx);
+    return angA - angB;
+  });
+}
+
+function dibujarFronterasPanel1() {
+  if (!modelos || modelos.length === 0) return;
+
+  noFill();
+  for (let i = 0; i < modelos.length; i++) {
+    const m = modelos[i];
+    if (!m.frontera || m.frontera.length === 0) continue;
+
+    let grosor, alfa;
+    if (modeloSeleccionado === i) {
+      grosor = 3;   alfa = 255;
+    } else if (modeloHover === i) {
+      grosor = 2.5; alfa = 230;
+    } else {
+      grosor = 2;   alfa = 180;
+    }
+
+    const c = m.color;
+    stroke(red(c), green(c), blue(c), alfa);
+    strokeWeight(grosor);
+
+    if (modeloSeleccionado === i) {
+      const ordenados = _ordenarFrontera(m.frontera);
+      beginShape();
+      for (const pt of ordenados) {
+        const { px, py } = dataToPanel1(pt.x1, pt.x2);
+        vertex(px, py);
+      }
+      endShape(CLOSE);
+    } else {
+      for (const pt of m.frontera) {
+        const { px, py } = dataToPanel1(pt.x1, pt.x2);
+        point(px, py);
+      }
+    }
+  }
+}
+
+// ============================================================================
+// SUBTAREA 2.1 — RENDERIZADO DE DATOS EN PANEL 1
+// ============================================================================
+
+function _panel1PlotArea() {
+  // Devuelve el rectángulo de graficado dentro de Panel 1 (bajo título, con 5% de margen)
+  const r = panelRect(1);
+  const titleH = 24;
+  const innerX = r.x;
+  const innerY = r.y + titleH;
+  const innerW = r.w;
+  const innerH = r.h - titleH;
+  const mx = innerW * 0.05;
+  const my = innerH * 0.05;
+  return {
+    x: innerX + mx,
+    y: innerY + my,
+    w: innerW - 2 * mx,
+    h: innerH - 2 * my
+  };
+}
+
+function dataToPanel1(x1, x2) {
+  // Mapea coordenadas de datos normalizados [-1,1] a píxeles del Panel 1
+  // x2 positivo apunta hacia arriba en pantalla
+  const p = _panel1PlotArea();
+  const px = p.x + (x1 + 1) / 2 * p.w;
+  const py = p.y + (1 - (x2 + 1) / 2) * p.h;
+  return { px, py };
+}
+
+function panel1ToData(px, py) {
+  // Inversa de dataToPanel1
+  const p = _panel1PlotArea();
+  const x1 = (px - p.x) / p.w * 2 - 1;
+  const x2 = (1 - (py - p.y) / p.h) * 2 - 1;
+  return { x1, x2 };
+}
+
+function dibujarDatosPanel1() {
+  const COLOR_CLASE = ['#4B8BBE', '#E8825A']; // clase 0 → azul, clase 1 → naranja
+
+  // — Capa 5: Ejes y ticks —
+  const p = _panel1PlotArea();
+  stroke(180);
+  strokeWeight(1);
+
+  // Eje x₁ (horizontal, en x2 = 0)
+  const { px: ax0 } = dataToPanel1(-1, 0);
+  const { px: ax1 } = dataToPanel1(1, 0);
+  const { py: ayMid } = dataToPanel1(0, 0);
+  line(ax0, ayMid, ax1, ayMid);
+
+  // Eje x₂ (vertical, en x1 = 0)
+  const { py: ay0 } = dataToPanel1(0, -1);
+  const { py: ay1 } = dataToPanel1(0, 1);
+  const { px: axMid } = dataToPanel1(0, 0);
+  line(axMid, ay0, axMid, ay1);
+
+  // Ticks cada 0.5 unidades
+  const TICK_SIZE = 4;
+  fill(120);
+  noStroke();
+  textSize(9);
+  textAlign(CENTER, TOP);
+
+  for (let v = -1; v <= 1.001; v += 0.5) {
+    const vr = Math.round(v * 10) / 10; // evitar flotantes sucios
+    // Tick en eje x₁
+    const { px: tx } = dataToPanel1(vr, 0);
+    stroke(180);
+    strokeWeight(1);
+    line(tx, ayMid - TICK_SIZE, tx, ayMid + TICK_SIZE);
+    // Etiqueta solo en valores distintos de 0
+    if (Math.abs(vr) > 0.01) {
+      noStroke();
+      fill(120);
+      text(vr.toFixed(1), tx, ayMid + TICK_SIZE + 2);
+    }
+
+    // Tick en eje x₂
+    const { py: ty } = dataToPanel1(0, vr);
+    stroke(180);
+    strokeWeight(1);
+    line(axMid - TICK_SIZE, ty, axMid + TICK_SIZE, ty);
+    if (Math.abs(vr) > 0.01) {
+      noStroke();
+      fill(120);
+      textAlign(RIGHT, CENTER);
+      text(vr.toFixed(1), axMid - TICK_SIZE - 2, ty);
+      textAlign(CENTER, TOP);
+    }
+  }
+
+  // Etiquetas de ejes
+  fill(80);
+  noStroke();
+  textSize(10);
+  textAlign(RIGHT, BOTTOM);
+  text('x₁', ax1 + 12, ayMid + 4);
+  textAlign(LEFT, TOP);
+  text('x₂', axMid + 3, ay1 - 14);
+
+  // — Capa 3: Datos de entrenamiento (sin borde) —
+  noStroke();
+  for (const d of datosTrain) {
+    const c = color(COLOR_CLASE[d.y]);
+    fill(c);
+    const { px, py } = dataToPanel1(d.x[0], d.x[1]);
+    circle(px, py, 8); // diámetro = 8 → radio = 4px
+  }
+
+  // — Capa 2: Datos de test (borde blanco 1.5px) —
+  strokeWeight(1.5);
+  for (const d of datosTest) {
+    const c = color(COLOR_CLASE[d.y]);
+    fill(c);
+    stroke(255);
+    const { px, py } = dataToPanel1(d.x[0], d.x[1]);
+    circle(px, py, 8);
+  }
+
+  // — Leyenda Train / Test —
+  // Fija la posición relativa a la zona de graficado, no a toda el área del panel
+  const pLey = _panel1PlotArea();
+  const lx = pLey.x - 6;  // margen desde el borde izquierdo del área de graficado
+  const ly = pLey.y + pLey.h - 28; // margen desde el borde inferior del área de graficado
+  const LW = 52, LH = 34;
+
+  fill(20, 20, 20, 150); noStroke();
+  rect(lx - 4, ly - 4, LW, LH, 3);
+
+  fill(180); noStroke();
+  ellipse(lx + 5, ly + 7, 7);
+  fill(255); textSize(9); textAlign(LEFT, CENTER); noStroke();
+  text('Train', lx + 13, ly + 7);
+
+  fill(60); stroke(255); strokeWeight(1.5);
+  ellipse(lx + 5, ly + 22, 7);
+  noStroke(); fill(255); textSize(9); textAlign(LEFT, CENTER);
+  text('Test', lx + 13, ly + 22);
+}
+
+// ============================================================================
+// PANEL 2 — Historial de pérdida
+// ============================================================================
+
+function _panel2PlotArea() {
+  // Devuelve { x, y, w, h } del área de trazado dentro de Panel 2
+  const r = panelRect(2);
+  const PAD_L = 42, PAD_R = 12, PAD_T = 38, PAD_B = 36;
+  return {
+    x: r.x + PAD_L,
+    y: r.y + PAD_T,
+    w: r.w - PAD_L - PAD_R,
+    h: r.h - PAD_T - PAD_B
+  };
+}
+
+function _epToX(ep, totalEpocas, plot) {
+  // Convierte número de época a coordenada X en el área de trazado
+  return plot.x + (ep / Math.max(totalEpocas, 1)) * plot.w;
+}
+
+function _calcularRangoY() {
+  let yMin = Infinity, yMax = -Infinity;
+  for (const m of modelos) {
+    if (!m.historial || m.historial.length === 0) continue;
+    for (const h of m.historial) {
+      if (h.J_train !== undefined && isFinite(h.J_train)) {
+        if (h.J_train < yMin) yMin = h.J_train;
+        if (h.J_train > yMax) yMax = h.J_train;
+      }
+      if (mostrarCurvasTest && h.J_test !== undefined && isFinite(h.J_test)) {
+        if (h.J_test < yMin) yMin = h.J_test;
+        if (h.J_test > yMax) yMax = h.J_test;
+      }
+    }
+  }
+  if (!isFinite(yMin) || !isFinite(yMax)) {
+    return { yMin: 0, yMax: J_max_epoca0 * 1.05 };
+  }
+  const margen = (yMax - yMin) * 0.05 || 0.01;
+  return { yMin: Math.max(0, yMin - margen), yMax: yMax + margen };
+}
+
+function _valToY(val, plot, yMin, yMax) {
+  if (modoAccPanel2) {
+    const v = constrain(val, 0, 1);
+    return plot.y + plot.h - v * plot.h;
+  }
+  if (modoLogPanel2) {
+    const vLog   = Math.log10(Math.max(val,  1e-8));
+    const minLog = Math.log10(Math.max(yMin, 1e-8));
+    const maxLog = Math.log10(Math.max(yMax, 1e-8));
+    const rango  = maxLog - minLog || 1;
+    const t = (vLog - minLog) / rango;
+    return plot.y + plot.h - t * plot.h;
+  } else {
+    const rango = yMax - yMin || 1;
+    return plot.y + plot.h - ((val - yMin) / rango) * plot.h;
+  }
+}
+
+function dibujarHistorialPanel2() {
+  const r = panelRect(2);
+  const plot = _panel2PlotArea();
+
+  // Fondo del área de trazado
+  noStroke();
+  fill(250);
+  rect(plot.x, plot.y, plot.w, plot.h);
+
+  if (!modelos || modelos.length === 0) {
+    fill(160); noStroke(); textSize(11); textAlign(CENTER, CENTER);
+    text('Sin datos', plot.x + plot.w / 2, plot.y + plot.h / 2);
+    _dibujarTogglesPanel2(r, plot);
+    return;
+  }
+
+  const totalEpocas = maximoEpocas;
+  const { yMin, yMax } = _calcularRangoY();
+
+  // Líneas de cuadrícula horizontales
+  stroke(220); strokeWeight(0.5);
+  const nLineas = 5;
+  for (let i = 0; i <= nLineas; i++) {
+    const t = i / nLineas;
+    const y = plot.y + t * plot.h;
+    line(plot.x, y, plot.x + plot.w, y);
+  }
+
+  // Eje X (épocas)
+  stroke(180); strokeWeight(1);
+  line(plot.x, plot.y + plot.h, plot.x + plot.w, plot.y + plot.h);
+
+  // Eje Y
+  line(plot.x, plot.y, plot.x, plot.y + plot.h);
+
+  // Etiquetas eje Y: 5 divisiones entre yMin y yMax
+  noStroke(); fill(120); textSize(11); textAlign(RIGHT, CENTER);
+  for (let i = 0; i <= nLineas; i++) {
+    const val = modoLogPanel2
+      ? Math.pow(10, Math.log10(Math.max(yMin, 1e-8)) +
+          i * (Math.log10(Math.max(yMax, 1e-8)) - Math.log10(Math.max(yMin, 1e-8))) / nLineas)
+      : yMin + (yMax - yMin) * i / nLineas;
+    const ty = _valToY(val, plot, yMin, yMax);
+    let etiq;
+    if (modoAccPanel2) {
+      etiq = (val * 100).toFixed(0) + '%';
+    } else {
+      etiq = val < 0.01 ? val.toExponential(1) : val.toFixed(3);
+    }
+    text(etiq, plot.x - 3, ty);
+  }
+
+  // Etiquetas eje X
+  noStroke(); fill(120); textSize(11); textAlign(CENTER, TOP);
+  const pasoX = totalEpocas <= 50  ? 10
+              : totalEpocas <= 200 ? 25
+              : totalEpocas <= 500 ? 50
+              : totalEpocas <= 1000 ? 100
+              : totalEpocas <= 2000 ? 200
+              : 500;
+  for (let ep = 0; ep <= totalEpocas; ep += pasoX) {
+    const x = _epToX(ep, totalEpocas, plot);
+    text(ep, x, plot.y + plot.h + 3);
+  }
+
+  // Línea J* (si existe modeloReferencia y convergio)
+  if (modeloReferencia !== null) {
+    const mRef = modelos[modeloReferencia];
+    if (mRef && mRef.historial && mRef.historial.length > 0) {
+      const campoRef = modoAccPanel2 ? 'accuracy_test' : 'J_train';
+      const ultimoRef = mRef.historial[mRef.historial.length - 1][campoRef];
+      if (ultimoRef !== undefined) {
+        const yRef = _valToY(ultimoRef, plot, yMin, yMax);
+        stroke(200, 200, 200); strokeWeight(1);
+        drawingContext.setLineDash([4, 4]);
+        line(plot.x, yRef, plot.x + plot.w, yRef);
+        drawingContext.setLineDash([]);
+        noStroke(); fill(140); textSize(10); textAlign(LEFT, BOTTOM);
+        text('J*', plot.x + 2, yRef - 1);
+      }
+    }
+  }
+
+  // Recortar curvas al área del plot
+  drawingContext.save();
+  drawingContext.beginPath();
+  drawingContext.rect(plot.x, plot.y, plot.w, plot.h);
+  drawingContext.clip();
+
+  // Curvas de pérdida/accuracy
+  const campo = modoAccPanel2 ? 'accuracy_test' : 'J_train';
+  for (let i = 0; i < modelos.length; i++) {
+    const m = modelos[i];
+    if (!m.historial || m.historial.length < 2) continue;
+
+    const c = m.color;
+    let alfa;
+    if (modeloSeleccionado === i)   alfa = 255;
+    else if (modeloHover === i)     alfa = 200;
+    else                            alfa = 60;
+
+    stroke(red(c), green(c), blue(c), alfa);
+    strokeWeight(modeloSeleccionado === i ? 2 : 1);
+    noFill();
+
+    beginShape();
+    for (let ep = 0; ep < m.historial.length; ep++) {
+      const val = m.historial[ep][campo];
+      if (val === undefined || val === null) continue;
+      const x = _epToX(ep, totalEpocas, plot);
+      const y = _valToY(val, plot, yMin, yMax);
+      vertex(x, y);
+    }
+    endShape();
+  }
+
+  // Curvas de test (si mostrarCurvasTest)
+  if (mostrarCurvasTest) {
+    const campoTest = modoAccPanel2 ? 'accuracy_test' : 'J_test';
+    for (let i = 0; i < modelos.length; i++) {
+      const m = modelos[i];
+      if (!m.historial || m.historial.length < 2) continue;
+      const c = m.color;
+      let alfa = modeloSeleccionado === i ? 200 : modeloHover === i ? 140 : 40;
+      stroke(red(c), green(c), blue(c), alfa);
+      strokeWeight(1);
+      noFill();
+      drawingContext.setLineDash([3, 3]);
+      beginShape();
+      for (let ep = 0; ep < m.historial.length; ep++) {
+        const val = m.historial[ep][campoTest];
+        if (val === undefined || val === null) continue;
+        const x = _epToX(ep, totalEpocas, plot);
+        const y = _valToY(val, plot, yMin, yMax);
+        vertex(x, y);
+      }
+      endShape();
+      drawingContext.setLineDash([]);
+    }
+  }
+
+  drawingContext.restore();
+
+  _dibujarTogglesPanel2(r, plot);
+}
+
+function _dibujarTogglesPanel2(r, plot) {
+  // Botones Lin, Test, J/Acc en la esquina superior derecha del panel
+  const BTN_W = 44, BTN_H = 18, GAP = 6;
+  const bY      = r.y + 5;
+  const bX_J    = r.x + r.w - 10 - BTN_W;
+  const bX_Test = bX_J - GAP - BTN_W;
+  const bX_Lin  = bX_Test - GAP - BTN_W;
+
+  // Botón Lin/Log
+  fill(modoLogPanel2 ? 180 : 230); stroke(150); strokeWeight(1);
+  rect(bX_Lin, bY, BTN_W, BTN_H, 2);
+  noStroke(); fill(40); textSize(10); textAlign(CENTER, CENTER);
+  text(modoLogPanel2 ? 'Log' : 'Lin', bX_Lin + BTN_W / 2, bY + BTN_H / 2);
+
+  // Botón Test
+  fill(mostrarCurvasTest ? 180 : 230); stroke(150); strokeWeight(1);
+  rect(bX_Test, bY, BTN_W, BTN_H, 2);
+  noStroke(); fill(40); textSize(10); textAlign(CENTER, CENTER);
+  text('Test', bX_Test + BTN_W / 2, bY + BTN_H / 2);
+
+  // Botón J/Acc (solo clasificación)
+  if (esTipoClasif) {
+    fill(modoAccPanel2 ? 180 : 230); stroke(150); strokeWeight(1);
+    rect(bX_J, bY, BTN_W, BTN_H, 2);
+    noStroke(); fill(40); textSize(10); textAlign(CENTER, CENTER);
+    text(modoAccPanel2 ? 'Acc' : 'J', bX_J + BTN_W / 2, bY + BTN_H / 2);
+  }
+}
+
+// ============================================================================
+// INTERACCIÓN (Mouse)
+// ============================================================================
+
+function _distMinFrontera(puntos) {
+  // Distancia mínima en píxeles del cursor a cualquier punto de la frontera dada
+  let minDist = Infinity;
+  for (const pt of puntos) {
+    const { px, py } = dataToPanel1(pt.x1, pt.x2);
+    const d = Math.hypot(mouseX - px, mouseY - py);
+    if (d < minDist) minDist = d;
+  }
+  return minDist;
+}
+
+function mousePressed(event) {
+  // Nota: el botón principal está en el DOM (#btn-principal), no aquí.
+
+  // Detección de clics en pestañas
+  const y = TOOLBAR_HEIGHT;
+  const h = TAB_HEIGHT;
+  const pestanas = ['eta', 'init', 'activacion', 'dropout', 'topologia'];
+  const ancho_pestaña = 140;
+  let x = 8;
+
+  for (let i = 0; i < pestanas.length; i++) {
+    if (mouseX > x && mouseX < x + ancho_pestaña &&
+        mouseY > y && mouseY < y + h) {
+      moduloActivo = pestanas[i];
+      resetear();
+      break;
+    }
+    x += ancho_pestaña + 2;
+  }
+
+  // Interacción Panel 3: seleccionar modelo por click en su círculo
+  if (modelos && modelos.length > 0) {
+    const r3c = panelRect(3);
+    const DIAM_C = 10, SEP_C = 48;
+    const totalW_C = modelos.length * SEP_C - (SEP_C - DIAM_C);
+    const cirX0_C  = r3c.x + (r3c.w - totalW_C) / 2;
+    const cirY_C   = r3c.y + r3c.h - 40;
+    const HIT_R    = 14;
+
+    for (let i = 0; i < modelos.length; i++) {
+      const cx = cirX0_C + i * SEP_C;
+      const d  = Math.hypot(mouseX - cx, mouseY - cirY_C);
+      if (d <= HIT_R) {
+        modeloSeleccionado = (modeloSeleccionado === i) ? null : i;
+        if (modeloSeleccionado !== null) {
+          modeloMapa = modelos[modeloSeleccionado];
+          renderizarMapa(modeloMapa);
+        }
+        break;
+      }
+    }
+  }
+
+  // Interacción Panel 1: seleccionar modelo por proximidad a su frontera
+  const r1 = panelRect(1);
+  if (mouseX >= r1.x && mouseX <= r1.x + r1.w &&
+      mouseY >= r1.y && mouseY <= r1.y + r1.h) {
+
+    let mejorIdx = null;
+    let mejorDist = Infinity;
+    for (let i = 0; i < modelos.length; i++) {
+      if (!modelos[i].frontera || modelos[i].frontera.length === 0) continue;
+      const d = _distMinFrontera(modelos[i].frontera);
+      if (d < 8 && d < mejorDist) { mejorDist = d; mejorIdx = i; }
+    }
+
+    if (mejorIdx !== null) {
+      modeloSeleccionado = mejorIdx;
+      modeloMapa = modelos[mejorIdx];
+      renderizarMapa(modeloMapa);
+    } else {
+      modeloSeleccionado = null;
+    }
+  }
+
+  // 2G: toggles Lin, Test, J/Acc en Panel 2
+  {
+    const r2 = panelRect(2);
+    const BTN_W = 44, BTN_H = 18, GAP = 6;
+    const bY2      = r2.y + 5;
+    const bX_J2    = r2.x + r2.w - 10 - BTN_W;
+    const bX_Test2 = bX_J2 - GAP - BTN_W;
+    const bX_Lin2  = bX_Test2 - GAP - BTN_W;
+    if (mouseY >= bY2 && mouseY <= bY2 + BTN_H) {
+      if (mouseX >= bX_Lin2 && mouseX <= bX_Lin2 + BTN_W)
+        modoLogPanel2 = !modoLogPanel2;
+      if (mouseX >= bX_Test2 && mouseX <= bX_Test2 + BTN_W)
+        mostrarCurvasTest = !mostrarCurvasTest;
+      if (esTipoClasif && mouseX >= bX_J2 && mouseX <= bX_J2 + BTN_W)
+        modoAccPanel2 = !modoAccPanel2;
+    }
+  }
+
+  // 2I: clic en Panel 2 — seleccionar curva más cercana
+  {
+    const r2 = panelRect(2);
+    if (mouseX >= r2.x && mouseX <= r2.x + r2.w &&
+        mouseY >= r2.y && mouseY <= r2.y + r2.h) {
+      const plot = _panel2PlotArea();
+      if (modelos && modelos.length > 0) {
+        const campo = modoAccPanel2 ? 'accuracy_test' : 'J_train';
+        const { yMin: ym2, yMax: yx2 } = _calcularRangoY();
+        let mejorIdx = null, mejorDist = 10;
+        for (let i = 0; i < modelos.length; i++) {
+          const m = modelos[i];
+          if (!m.historial || m.historial.length < 2) continue;
+          for (let ep = 0; ep < m.historial.length; ep++) {
+            const val = m.historial[ep][campo];
+            if (val === undefined || val === null) continue;
+            const cx = _epToX(ep, maximoEpocas, plot);
+            const cy = _valToY(val, plot, ym2, yx2);
+            const d = Math.hypot(mouseX - cx, mouseY - cy);
+            if (d < mejorDist) { mejorDist = d; mejorIdx = i; }
+          }
+        }
+        if (mejorIdx !== null) {
+          modeloSeleccionado = mejorIdx;
+          modeloMapa = modelos[mejorIdx];
+          renderizarMapa(modeloMapa);
+        }
+      }
+    }
+  }
+
+  // Solo bloquear el evento si el click es directamente sobre el canvas
+  if (event && event.target && event.target.tagName === 'CANVAS') {
+    return false;
+  }
+}
+
+function mouseMoved() {
+  // Hover Panel 1: modelo más cercano al cursor (< 8px de su frontera)
+  const r1 = panelRect(1);
+  if (mouseX >= r1.x && mouseX <= r1.x + r1.w &&
+      mouseY >= r1.y && mouseY <= r1.y + r1.h) {
+
+    let mejorIdx = null;
+    let mejorDist = Infinity;
+    for (let i = 0; i < modelos.length; i++) {
+      if (!modelos[i].frontera || modelos[i].frontera.length === 0) continue;
+      const d = _distMinFrontera(modelos[i].frontera);
+      if (d < 8 && d < mejorDist) { mejorDist = d; mejorIdx = i; }
+    }
+    modeloHover = mejorIdx;
+  } else {
+    // 2H: Hover Panel 2 — modelo más cercano a algún punto de su curva
+    const r2 = panelRect(2);
+    if (mouseX >= r2.x && mouseX <= r2.x + r2.w &&
+        mouseY >= r2.y && mouseY <= r2.y + r2.h) {
+      const plot = _panel2PlotArea();
+      const campo = modoAccPanel2 ? 'accuracy_test' : 'J_train';
+      const { yMin: ym3, yMax: yx3 } = _calcularRangoY();
+      let mejorIdx = null, mejorDist = 12;
+      if (modelos) {
+        for (let i = 0; i < modelos.length; i++) {
+          const m = modelos[i];
+          if (!m.historial || m.historial.length < 2) continue;
+          for (let ep = 0; ep < m.historial.length; ep++) {
+            const val = m.historial[ep][campo];
+            if (val === undefined || val === null) continue;
+            const cx = _epToX(ep, maximoEpocas, plot);
+            const cy = _valToY(val, plot, ym3, yx3);
+            const d = Math.hypot(mouseX - cx, mouseY - cy);
+            if (d < mejorDist) { mejorDist = d; mejorIdx = i; }
+          }
+        }
+      }
+      modeloHover = mejorIdx;
+    } else {
+      modeloHover = null;
+    }
+  }
+}
+
+// ============================================================================
+// INICIALIZACIÓN Y LOOP PRINCIPAL
+// ============================================================================
+
+function setup() {
+  let cnv = createCanvas(windowWidth, windowHeight);
+  cnv.parent('p5-container');
+  colorMode(RGB, 255);
+
+  inicializarPaletas();
+
+  // Generar y normalizar datos para Panel 1
+  const datosGenerados = generarDatos('xor', 0, 0.8, 4721);
+  const datosNorm = normalizarDatos(datosGenerados.datosTrain, datosGenerados.datosTest);
+  datosTrain = datosNorm.datosTrain;
+  datosTest = datosNorm.datosTest;
+
+  // Crear overlay DOM de la barra global
+  crearOverlayBarra();
+
+  // Crear overlay DOM del Panel 3 (Etapa 3.1 — A1)
+  crearOverlayPanel3();
+
+  // Generar enjambre inicial (Etapa 3.1 — A2)
+  initEnjambre();
+
+  // Funciones de inicialización de etapas anteriores
+  initDatos();
+  initHistorial();
+
+  // Verificación Bug#1: regresión debe producir valores fuera de (0,1)
+  const _mReg = crearModelo([1, 4, 1], 'relu', 0.05, 0, 7, 'xavier');
+  const _prevClasif = esTipoClasif;
+  esTipoClasif = false;
+  const _fwdReg = forward(_mReg, [[0.5]], false);
+  const _salReg = _fwdReg.activaciones[_fwdReg.activaciones.length - 1][0][0];
+  esTipoClasif = _prevClasif;
+  console.log('[Bug#1 fix] Salida regresión (esperado fuera de (0,1)):', _salReg);
+
+  // Verificación Bug#2: dos forward con dropout deben producir máscaras distintas
+  const _mDrop = crearModelo([2, 4, 1], 'relu', 0.05, 0.5, 99, 'xavier');
+  const _f1 = forward(_mDrop, [[0.1, 0.2]], true);
+  _mDrop.stepCount++;
+  const _f2 = forward(_mDrop, [[0.1, 0.2]], true);
+  const _m1 = Array.from(_f1.mascarasDropout[1][0]);
+  const _m2 = Array.from(_f2.mascarasDropout[1][0]);
+  const _distintas = _m1.some((v, i) => v !== _m2[i]);
+  console.log('[Bug#2 fix] Máscaras dropout distintas entre pasos:', _distintas, '| paso1:', _m1, '| paso2:', _m2);
+
+  console.log('Setup completado. Estado: IDLE');
+  console.log('Paletas de color inicializadas');
+}
+
+function dibujarResumenPanel4() {
+  if (!modelos || modelos.length === 0) return;
+  const r = panelRect(4);
+  const x = r.x + 14;
+  let y = r.y + 36;
+  const lineH = 18;
+
+  const conv   = modelos.filter(m => m.estado === 'convergido').length;
+  const div    = modelos.filter(m => m.estado === 'divergente').length;
+  const noconv = modelos.filter(m => m.estado === 'no_convergido').length;
+  const activ  = modelos.filter(m => m.estado === 'activo').length;
+  const total  = modelos.length;
+
+  textSize(11); textAlign(LEFT, TOP); noStroke();
+
+  fill(60);
+  text(`Enjambre: ${total} modelos`, x, y); y += lineH * 1.4;
+
+  fill(46, 180, 90);
+  text(`✓ Aprendizaje exitoso: ${conv}`, x, y); y += lineH;
+  fill(200, 60, 60);
+  text(`✗ Divergentes:    ${div}`, x, y); y += lineH;
+  fill(140);
+  text(`— No convergidos: ${noconv}`, x, y); y += lineH;
+
+  if (activ > 0) {
+    fill(80, 120, 200);
+    text(`… Entrenando:     ${activ}`, x, y); y += lineH;
+  }
+
+  if (!enEstado('IDLE') && conv + div + noconv > 0) {
+    y += lineH * 0.5;
+    let mejorJ = Infinity, mejorEta = null;
+    for (const m of modelos) {
+      if (m.historial && m.historial.length > 0) {
+        const jt = m.historial[m.historial.length - 1].J_test;
+        if (jt !== undefined && jt < mejorJ) {
+          mejorJ = jt;
+          mejorEta = m.etiqueta;
+        }
+      }
+    }
+    if (isFinite(mejorJ)) {
+      fill(60);
+      text(`Mejor J_test: ${mejorJ.toFixed(4)}`, x, y); y += lineH;
+      fill(100);
+      text(`  → ${mejorEta}`, x, y);
+    }
+  }
+}
+
+function draw() {
+  background(245);
+
+  // Dibujar UI
+  dibujarBarraGlobal();
+  dibujarPestanas();
+  dibujarPaneles();
+  dibujarMapaPanel1();
+  dibujarFronterasPanel1();
+  dibujarDatosPanel1();
+  dibujarHistorialPanel2();
+  dibujarControlesPanel3();
+  dibujarResumenPanel4();
+  dibujarNotificacion();
+
+  // Lógica de animación (§13.1)
+  if (enEstado('RUNNING')) {
+    const pasos = pasosPorFrame();
+    for (let p = 0; p < pasos; p++) {
+      for (const m of modelos) {
+        if (m.estado === 'activo') {
+          stepModelo(m);
+        }
+      }
+      // Si todos terminaron en este paso, converger y salir del loop interno
+      if (modelos.length > 0 && modelos.every(m => m.estado !== 'activo')) {
+        converger();
+        break;
+      }
+    }
+
+    // Actualizar 1 modelo activo por frame (throttle — FIX 3A)
+    const activosIdx = modelos
+      .map((m, i) => ({ m, i }))
+      .filter(({ m }) => m.estado === 'activo');
+    if (activosIdx.length > 0) {
+      fronteraUpdateIdx = fronteraUpdateIdx % activosIdx.length;
+      const { m: mActualizar } = activosIdx[fronteraUpdateIdx];
+      const grid = calcularGridPrediccion(mActualizar, 50);
+      mActualizar.frontera = calcularFrontera(grid, 50);
+      fronteraUpdateIdx++;
+    }
+
+    // Actualizar mapa de fondo del modelo de referencia según frecuencia (§7.2)
+    const actualizarMapa = velocidad === 'lenta' ||
+                           (velocidad === 'normal' && frameCount % 5  === 0) ||
+                           (velocidad === 'rapida' && frameCount % 25 === 0);
+    if (actualizarMapa && modelos.length > 0) {
+      const ref = modeloSeleccionado !== null ? modeloSeleccionado : 0;
+      renderizarMapa(modelos[ref]);
+    }
+  }
+}
+
+// ============================================================================
+// ETAPA 1 — MOTOR MATEMÁTICO
+// ============================================================================
+
+// ============================================================================
+// SUBTAREA 1.1: GENERACIÓN DE DATOS Y NORMALIZACIÓN (§3)
+// ============================================================================
+
+class LCG {
+  // Linear Congruential Generator para reproducibilidad determinista
+  constructor(seed) {
+    this.seed = seed >>> 0; // 32-bit unsigned
+    this.a = 1103515245;
+    this.c = 12345;
+    this.m = 2147483648; // 2^31
+  }
+
+  next() {
+    this.seed = (this.a * this.seed + this.c) % this.m;
+    return this.seed / this.m; // [0, 1)
+  }
+
+  nextGaussian() {
+    // Box-Muller: genera dos normales estándar N(0, 1)
+    const u1 = this.next();
+    const u2 = this.next();
+    const z = Math.sqrt(-2 * Math.log(u1 + 1e-10)) * Math.cos(2 * Math.PI * u2);
+    return z;
+  }
+}
+
+function generarDatos(problema, nivelRuido, trainRatio, semilla) {
+  // Retorna {datosTrain, datosTest}
+  // §3.1, §3.2, §3.3
+
+  const rng = new LCG(semilla);
+  const sigma = nivelRuido * 0.004; // §3.2 — rango [0, 0.20] para datos en [-1,1]
+  const trainCount = Math.floor(200 * trainRatio); // 200 puntos totales por defecto
+
+  let datos = [];
+
+  if (problema === 'espiral') {
+    // Dos espirales entrelazadas, 100 puntos por clase
+    for (let clase = 0; clase < 2; clase++) {
+      for (let i = 0; i < 100; i++) {
+        const t = (i / 100) * (10 * Math.PI); // [0, 10π]
+        const r = t / (10 * Math.PI); // [0, 1]
+        const angulo = t + clase * Math.PI;
+        let x1 = r * Math.cos(angulo);
+        let x2 = r * Math.sin(angulo);
+        // Ruido
+        x1 += rng.nextGaussian() * sigma;
+        x2 += rng.nextGaussian() * sigma;
+        datos.push({ x: [x1, x2], y: clase });
+      }
+    }
+  } else if (problema === 'circulos') {
+    // 100 puntos clase interna (r < 0.4), 100 clase exterior (r > 0.6)
+    for (let clase = 0; clase < 2; clase++) {
+      const rMin = clase === 0 ? 0.1 : 0.6;
+      const rMax = clase === 0 ? 0.4 : 1.0;
+      for (let i = 0; i < 100; i++) {
+        const r = rMin + rng.next() * (rMax - rMin);
+        const theta = rng.next() * 2 * Math.PI;
+        let x1 = r * Math.cos(theta);
+        let x2 = r * Math.sin(theta);
+        x1 += rng.nextGaussian() * sigma;
+        x2 += rng.nextGaussian() * sigma;
+        datos.push({ x: [x1, x2], y: clase });
+      }
+    }
+  } else if (problema === 'xor') {
+    // 4 cuadrantes, clases alternadas, 50 puntos por cuadrante
+    const cuadrantes = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+    for (let q = 0; q < 4; q++) {
+      const [sx, sy] = cuadrantes[q];
+      const clase = (sx * sy > 0) ? 0 : 1; // clase 0: (+,+) y (-,-), clase 1: (+,-) y (-,+)
+      for (let i = 0; i < 50; i++) {
+        const x1 = sx * rng.next();
+        const x2 = sy * rng.next();
+        datos.push({
+          x: [
+            x1 + rng.nextGaussian() * sigma,
+            x2 + rng.nextGaussian() * sigma
+          ],
+          y: clase
+        });
+      }
+    }
+  } else if (problema === 'medialuna') {
+    // Dos semilunares, separación ajustable por ruido
+    for (let clase = 0; clase < 2; clase++) {
+      for (let i = 0; i < 100; i++) {
+        const t = (i / 100) * Math.PI;
+        const r = 0.5;
+        const x1 = r * Math.cos(t) + (clase === 0 ? 0.5 : -0.5);
+        const x2 = r * Math.sin(t) + (clase === 0 ? 0.5 : -0.5);
+        datos.push({
+          x: [
+            x1 + rng.nextGaussian() * sigma,
+            x2 + rng.nextGaussian() * sigma
+          ],
+          y: clase
+        });
+      }
+    }
+  } else if (problema === 'seno') {
+    // Regresión: y = sin(2πx) + ε, x ∈ [0, 1], 200 puntos uniformes
+    for (let i = 0; i < 200; i++) {
+      const x1 = i / 199; // [0, 1]
+      const y_true = Math.sin(2 * Math.PI * x1);
+      const y = y_true + rng.nextGaussian() * sigma;
+      datos.push({ x: [x1], y: y });
+    }
+  }
+
+  // Shuffle determinista
+  for (let i = datos.length - 1; i > 0; i--) {
+    const j = Math.floor(rng.next() * (i + 1));
+    [datos[i], datos[j]] = [datos[j], datos[i]];
+  }
+
+  // Split train/test
+  const datosTrain = datos.slice(0, trainCount);
+  const datosTest = datos.slice(trainCount);
+
+  // Retornar sin normalizar aún (normalizarDatos() lo hará)
+  esTipoClasif = (problema !== 'seno'); // FIX Bug#4
+  return { datosTrain, datosTest };
+}
+
+function normalizarDatos(datosTrain, datosTest) {
+  // Normaliza entradas a [-1, 1] usando min/max de entrenamiento
+  // Normaliza salida en regresión a [-1, 1]
+  // §3.5
+  // Retorna: {datosTrain_norm, datosTest_norm, paramNorm}
+
+  const nInput = datosTrain.length > 0 ? datosTrain[0].x.length : 1;
+  const esTipoRegresion = nInput === 1;
+
+  // Calcular min/max de entradas en train
+  const minX = new Array(nInput).fill(Infinity);
+  const maxX = new Array(nInput).fill(-Infinity);
+
+  for (const d of datosTrain) {
+    for (let j = 0; j < nInput; j++) {
+      minX[j] = Math.min(minX[j], d.x[j]);
+      maxX[j] = Math.max(maxX[j], d.x[j]);
+    }
+  }
+
+  // Calcular min/max de salida en train (solo regresión)
+  let minY = Infinity, maxY = -Infinity;
+  if (esTipoRegresion) {
+    for (const d of datosTrain) {
+      minY = Math.min(minY, d.y);
+      maxY = Math.max(maxY, d.y);
+    }
+  }
+
+  // Normalizar entradas en train y test
+  const normalizarEntrada = (x, j) => {
+    const rango = maxX[j] - minX[j];
+    return rango > 1e-10 ? 2 * (x - minX[j]) / rango - 1 : 0;
+  };
+
+  const normalizarSalida = (y) => {
+    const rango = maxY - minY;
+    return rango > 1e-10 ? 2 * (y - minY) / rango - 1 : 0;
+  };
+
+  const datosTrain_norm = datosTrain.map(d => ({
+    x: d.x.map((xi, j) => normalizarEntrada(xi, j)),
+    y: esTipoRegresion ? normalizarSalida(d.y) : d.y // clasificación no se normaliza
+  }));
+
+  const datosTest_norm = datosTest.map(d => ({
+    x: d.x.map((xi, j) => normalizarEntrada(xi, j)),
+    y: esTipoRegresion ? normalizarSalida(d.y) : d.y
+  }));
+
+  return {
+    datosTrain: datosTrain_norm,
+    datosTest: datosTest_norm,
+    paramNorm: { minX, maxX, minY, maxY, esTipoRegresion }
+  };
+}
+
+// ============================================================================
+// FUNCIONES DE ACTIVACIÓN (§4.2, §14.3)
+// ============================================================================
+
+function aplicarActivacion(z, tipo) {
+  // z: Float32Array o número
+  // tipo: 'relu'|'sigmoid'|'tanh'|'lineal'|'leaky_relu'
+  // Retorna: Float32Array con valores activados
+
+  if (typeof z === 'number') {
+    z = [z];
+  }
+
+  const result = new Float32Array(z.length);
+  for (let i = 0; i < z.length; i++) {
+    const val = z[i];
+    if (tipo === 'relu') {
+      result[i] = Math.max(0, val);
+    } else if (tipo === 'sigmoid') {
+      // Clamp para evitar overflow
+      const clamped = Math.min(100, Math.max(-100, val));
+      result[i] = 1 / (1 + Math.exp(-clamped));
+    } else if (tipo === 'tanh') {
+      result[i] = Math.tanh(val);
+    } else if (tipo === 'lineal') {
+      result[i] = val;
+    } else if (tipo === 'leaky_relu') {
+      result[i] = val > 0 ? val : 0.01 * val;
+    } else {
+      result[i] = val;
+    }
+  }
+  return result;
+}
+
+function derivadaActivacion(z, tipo) {
+  // z: Float32Array (pre-activaciones)
+  // tipo: 'relu'|'sigmoid'|'tanh'|'lineal'|'leaky_relu'
+  // Retorna: Float32Array con f'(z[i])
+
+  const result = new Float32Array(z.length);
+  for (let i = 0; i < z.length; i++) {
+    const val = z[i];
+    if (tipo === 'relu') {
+      result[i] = val > 0 ? 1 : 0;
+    } else if (tipo === 'sigmoid') {
+      const clamped = Math.min(100, Math.max(-100, val));
+      const sig = 1 / (1 + Math.exp(-clamped));
+      result[i] = sig * (1 - sig);
+    } else if (tipo === 'tanh') {
+      const t = Math.tanh(val);
+      result[i] = 1 - t * t;
+    } else if (tipo === 'lineal') {
+      result[i] = 1;
+    } else if (tipo === 'leaky_relu') {
+      result[i] = val > 0 ? 1 : 0.01;
+    } else {
+      result[i] = 1;
+    }
+  }
+  return result;
+}
+
+// ============================================================================
+// SUBTAREA 1.2: CREACIÓN DEL MODELO E INICIALIZACIÓN DE PESOS (§4.4)
+// ============================================================================
+
+function crearModelo(capas, activacion, eta, dropout, semillaPesos, distribucion) {
+  // Retorna un objeto modelo con estructura completa
+  // capas: [2, 4, 1], activacion: 'relu'|'sigmoid'|'tanh'|'lineal'|'leaky_relu'
+  // §4.4: distribución de pesos + §4.5: momentum
+
+  const modelo = {
+    capas,
+    activacion,
+    eta,
+    dropout,
+    semillaPesos,
+    distribucion,
+    pesos: [], // Float32Array[] por capa
+    sesgos: [], // Float32Array[] por capa
+    velPesos: [], // para momentum SGD
+    velSesgos: [], // para momentum SGD
+    historial: [],
+    estado: 'activo',
+    epocaFinal: null,
+    contadorConv: 0,
+    stepCount: 0  // FIX Bug#2: semilla dinámica de dropout
+  };
+
+  inicializarPesos(modelo, distribucion, semillaPesos);
+  return modelo;
+}
+
+function inicializarPesos(modelo, distribucion, semillaPesos) {
+  // Inicializa pesos según distribución y semilla
+  // Sesgos inicializados en 0 (§4.4)
+  // §4.4: Uniforme, Normal, Xavier, He
+
+  const { capas } = modelo;
+  const rng = new LCG(semillaPesos);
+
+  modelo.pesos = [];
+  modelo.sesgos = [];
+  modelo.velPesos = [];
+  modelo.velSesgos = [];
+
+  for (let l = 1; l < capas.length; l++) {
+    const nIn = capas[l - 1];
+    const nOut = capas[l];
+    const nWeights = nIn * nOut;
+
+    // Calcular desviación estándar según distribución
+    let std;
+    if (distribucion === 'uniforme') {
+      // U[-0.5, 0.5]
+      std = null; // handled separately
+    } else if (distribucion === 'normal') {
+      std = 0.1;
+    } else if (distribucion === 'xavier') {
+      std = Math.sqrt(2 / (nIn + nOut));
+    } else if (distribucion === 'he') {
+      std = Math.sqrt(2 / nIn);
+    } else {
+      std = 0.1;
+    }
+
+    // Inicializar pesos
+    const pesos = new Float32Array(nWeights);
+    for (let i = 0; i < nWeights; i++) {
+      if (distribucion === 'uniforme') {
+        pesos[i] = (rng.next() - 0.5); // [-0.5, 0.5]
+      } else {
+        pesos[i] = rng.nextGaussian() * std;
+      }
+    }
+    modelo.pesos.push(pesos);
+    modelo.velPesos.push(new Float32Array(nWeights)); // inicializar en 0
+
+    // Inicializar sesgos en 0
+    const sesgos = new Float32Array(nOut);
+    modelo.sesgos.push(sesgos);
+    modelo.velSesgos.push(new Float32Array(nOut)); // v_b inicializado en 0
+  }
+}
+
+// ============================================================================
+// SUBTAREA 1.3: FORWARD PASS (§14.1)
+// ============================================================================
+
+function forward(modelo, X, conDropout = false) {
+  // X: array de ejemplos [[x1, x2], [x1, x2], ...] o un ejemplo [x1, x2]
+  // conDropout: si aplicar dropout
+  // Retorna: {activaciones, preActivaciones, mascarasDropout}
+  // §14.1: z[l] = W[l]·a[l-1] + b[l], a[l] = f(z[l])
+
+  // Si X es un solo ejemplo, convertir a batch de 1
+  let ejemplos = X;
+  let esUnEjemplo = false;
+  if (X.length > 0 && !Array.isArray(X[0])) {
+    ejemplos = [X];
+    esUnEjemplo = true;
+  }
+
+  const n = ejemplos.length;
+  const { capas, activacion, dropout, pesos, sesgos } = modelo;
+  const L = capas.length - 1; // número de capas (conexiones)
+
+  const activaciones = []; // a[l]
+  const preActivaciones = []; // z[l]
+  const mascarasDropout = [];
+
+  // Capa 0 (entrada)
+  let a = [];
+  for (let i = 0; i < n; i++) {
+    a.push(new Float32Array(ejemplos[i]));
+  }
+  activaciones.push(a);
+  preActivaciones.push(null);
+  mascarasDropout.push(null);
+
+  // Capas intermedias y salida
+  for (let l = 1; l <= L; l++) {
+    const W = pesos[l - 1];
+    const b = sesgos[l - 1];
+    const nIn = capas[l - 1];
+    const nOut = capas[l];
+    const a_prev = a;
+
+    // Calcular z[l] = W·a[l-1] + b (§14.1)
+    let z = [];
+    for (let i = 0; i < n; i++) {
+      const zi = new Float32Array(nOut);
+      // Bias
+      for (let j = 0; j < nOut; j++) {
+        zi[j] = b[j];
+      }
+      // Matriz-vector: W[j,:] · a_prev[i][:]
+      const ai = a_prev[i];
+      for (let j = 0; j < nOut; j++) {
+        for (let k = 0; k < nIn; k++) {
+          zi[j] += W[k * nOut + j] * ai[k];
+        }
+      }
+      z.push(zi);
+    }
+    preActivaciones.push(z);
+
+    // Aplicar activación
+    if (l < L) {
+      // Capas ocultas: aplicar función de activación elegida
+      a = z.map(zi => aplicarActivacion(zi, activacion));
+
+      // Dropout (§4.6, inverted dropout)
+      if (conDropout && dropout > 0) {
+        const mascaraL = [];
+        const p = dropout;
+        const rng = new LCG(modelo.semillaPesos * 10007 + l * 1009 + modelo.stepCount * 997); // FIX Bug#2
+        for (let i = 0; i < n; i++) {
+          const m = new Float32Array(a[i].length);
+          for (let j = 0; j < a[i].length; j++) {
+            // Bernoulli(1 - p) con LCG
+            const keep = rng.next() < (1 - p) ? 1 : 0;
+            m[j] = keep / (1 - p); // inverted dropout: escalar por 1/(1-p)
+            a[i][j] *= m[j];
+          }
+          mascaraL.push(m);
+        }
+        mascarasDropout.push(mascaraL);
+      } else {
+        mascarasDropout.push(null);
+      }
+    } else {
+      // FIX Bug#1: usar sigmoid solo en clasificación, lineal en regresión
+      const activacionSalida = esTipoClasif ? 'sigmoid' : 'lineal';
+      a = z.map(zi => aplicarActivacion(zi, activacionSalida));
+      mascarasDropout.push(null);
+    }
+
+    // Guardar activación de esta capa (dentro del loop, para todas las capas)
+    activaciones.push(a);
+  }
+
+  return {
+    activaciones,
+    preActivaciones,
+    mascarasDropout
+  };
+}
+
+// ============================================================================
+// SUBTAREA 1.4: PÉRDIDA Y ACCURACY (§4.3, §14.4)
+// ============================================================================
+
+function calcularLoss(yPred, yReal, tipo) {
+  // yPred: array o Float32Array de predicciones (ya en (0,1) para clasificación)
+  // yReal: array o Float32Array de valores reales {0,1} o valores continuos
+  // tipo: 'bce' o 'mse'
+  // Retorna: número (pérdida promedio)
+  // §4.3
+
+  if (yPred.length === 0) return 0;
+
+  const epsilon = 1e-7;
+  let suma = 0;
+
+  if (tipo === 'bce') {
+    // Clasificación: L = -(1/n) * Σ[y*log(ŷ+ε) + (1-y)*log(1-ŷ+ε)]
+    for (let i = 0; i < yPred.length; i++) {
+      const yp = Math.min(1 - epsilon, Math.max(epsilon, yPred[i]));
+      const y = yReal[i];
+      suma += y * Math.log(yp) + (1 - y) * Math.log(1 - yp);
+    }
+    return -suma / yPred.length;
+  } else if (tipo === 'mse') {
+    // Regresión: L = (1/n) * Σ(y - ŷ)²
+    for (let i = 0; i < yPred.length; i++) {
+      const diff = yReal[i] - yPred[i];
+      suma += diff * diff;
+    }
+    return suma / yPred.length;
+  }
+
+  return 0;
+}
+
+function calcularAccuracy(yPred, yReal) {
+  // yPred: array de predicciones en (0,1)
+  // yReal: array de etiquetas {0,1}
+  // Retorna: número en [0,1]
+  // §14.4: ŷ_clase = 1 si ŷ >= 0.5, 0 si ŷ < 0.5
+
+  if (yPred.length === 0) return 0;
+
+  let correctas = 0;
+  for (let i = 0; i < yPred.length; i++) {
+    const yp_clase = yPred[i] >= 0.5 ? 1 : 0;
+    if (yp_clase === yReal[i]) {
+      correctas++;
+    }
+  }
+
+  return correctas / yPred.length;
+}
+
+// ============================================================================
+// SUBTAREA 1.5: BACKPROPAGATION (§14.2, §14.3)
+// ============================================================================
+
+function backprop(modelo, activaciones, preActivaciones, yReal, tipo) {
+  // activaciones: a[0], a[1], ..., a[L] (arrays de Float32Array)
+  // preActivaciones: null, z[1], z[2], ..., z[L] (arrays de Float32Array)
+  // yReal: array de etiquetas o valores
+  // tipo: 'bce' o 'mse'
+  // Retorna: {dW, db} donde dW y db son Float32Array[] (gradientes por capa)
+  // §14.2: δ[L] = ŷ - y para ambos tipos (formulación simplificada)
+
+  const L = modelo.capas.length - 1;
+  const n = activaciones[0].length; // número de ejemplos
+  const dW = [];
+  const db = [];
+
+  // Inicializar deltas δ[l]
+  const delta = new Array(L + 1);
+
+  // Capa de salida L
+  const yPred = activaciones[L];
+  delta[L] = [];
+  for (let i = 0; i < n; i++) {
+    const deltaL = new Float32Array(yPred[i].length);
+    for (let j = 0; j < yPred[i].length; j++) {
+      deltaL[j] = yPred[i][j] - yReal[i]; // δ[L] = ŷ - y (§14.2)
+    }
+    delta[L].push(deltaL);
+  }
+
+  // Capas ocultas (backward): l = L-1, ..., 1
+  for (let l = L - 1; l >= 1; l--) {
+    const zl = preActivaciones[l];
+    const nOut_l = modelo.capas[l];
+    const nOut_lplus1 = modelo.capas[l + 1];
+    const W_lplus1 = modelo.pesos[l]; // W[l+1] para multiplicación
+
+    delta[l] = [];
+    for (let i = 0; i < n; i++) {
+      // δ[l] = (W[l+1]ᵀ · δ[l+1]) ⊙ f'(z[l])
+      const deltaL = new Float32Array(nOut_l);
+
+      // W[l+1]ᵀ · δ[l+1]
+      for (let j = 0; j < nOut_l; j++) {
+        let suma = 0;
+        for (let k = 0; k < nOut_lplus1; k++) {
+          suma += W_lplus1[j * nOut_lplus1 + k] * delta[l + 1][i][k];
+        }
+        deltaL[j] = suma;
+      }
+
+      // ⊙ f'(z[l])
+      const f_prime = derivadaActivacion(zl[i], modelo.activacion);
+      for (let j = 0; j < nOut_l; j++) {
+        deltaL[j] *= f_prime[j];
+      }
+
+      delta[l].push(deltaL);
+    }
+  }
+
+  // Calcular gradientes de pesos y sesgos
+  // ∂L/∂W[l] = (1/n) · δ[l] · a[l-1]ᵀ
+  // ∂L/∂b[l] = (1/n) · Σ δ[l]
+
+  for (let l = 1; l <= L; l++) {
+    const nIn = modelo.capas[l - 1];
+    const nOut = modelo.capas[l];
+
+    const dWl = new Float32Array(nIn * nOut);
+    const dbl = new Float32Array(nOut);
+
+    for (let i = 0; i < n; i++) {
+      const a_prev = activaciones[l - 1][i]; // a[l-1]
+      const deltaL = delta[l][i]; // δ[l]
+
+      // ∂L/∂W[l] += δ[l] · a[l-1]ᵀ
+      for (let j = 0; j < nOut; j++) {
+        for (let k = 0; k < nIn; k++) {
+          dWl[k * nOut + j] += deltaL[j] * a_prev[k];
+        }
+        // ∂L/∂b[l] += δ[l]
+        dbl[j] += deltaL[j];
+      }
+    }
+
+    // Promediar sobre n
+    for (let i = 0; i < dWl.length; i++) {
+      dWl[i] /= n;
+    }
+    for (let i = 0; i < dbl.length; i++) {
+      dbl[i] /= n;
+    }
+
+    dW.push(dWl);
+    db.push(dbl);
+  }
+
+  return { dW, db };
+}
+
+// ============================================================================
+// SUBTAREA 1.6: ACTUALIZACIÓN DE PESOS Y ENTRENAMIENTO (§4.5, §13.1)
+// ============================================================================
+
+function actualizarPesos(modelo, gradientes) {
+  // Actualiza pesos usando SGD + momentum β=0.9 (§4.5)
+  // v[t] = β·v[t-1] + η·∇L
+  // w[t+1] = w[t] - v[t]
+
+  const beta = 0.9;
+  const eta = modelo.eta;
+  const { pesos, sesgos, velPesos, velSesgos } = modelo; // FIX Bug#3
+  const { dW, db } = gradientes;                          // FIX Bug#3
+
+  for (let l = 0; l < modelo.pesos.length; l++) {
+    const W = modelo.pesos[l];
+    const b = modelo.sesgos[l];
+    const vW = modelo.velPesos[l];
+    const vb = modelo.velSesgos[l];
+    const dWl = gradientes.dW[l];
+    const dbl = gradientes.db[l];
+
+    // Actualizar velocidades
+    for (let i = 0; i < W.length; i++) {
+      vW[i] = beta * vW[i] + eta * dWl[i];
+      W[i] -= vW[i];
+    }
+
+    for (let i = 0; i < b.length; i++) {
+      vb[i] = beta * vb[i] + eta * dbl[i];
+      b[i] -= vb[i];
+    }
+  }
+}
+
+function entrenarEpoca(modelo, datosTrain) {
+  // Una época completa de entrenamiento
+  // §13.1: forward + loss + backprop + update
+  // Retorna: {J_train}
+
+  if (datosTrain.length === 0) return { J_train: 0 };
+
+  modelo.stepCount = (modelo.stepCount || 0) + 1; // FIX Bug#2
+
+  const X_train = datosTrain.map(d => d.x);
+  const y_train = datosTrain.map(d => d.y);
+  const tipoLoss = esTipoClasif ? 'bce' : 'mse'; // FIX Bug#4
+
+  // Forward pass (con dropout si modelo.dropout > 0)
+  const conDropout = modelo.dropout > 0;
+  const fwd = forward(modelo, X_train, conDropout);
+
+  // Extraer predicciones finales
+  const yPred = fwd.activaciones[fwd.activaciones.length - 1].map(a => a[0]);
+
+  // Calcular loss
+  const J_train = calcularLoss(yPred, y_train, tipoLoss);
+
+  // Backprop
+  const gradientes = backprop(modelo, fwd.activaciones, fwd.preActivaciones, y_train, tipoLoss);
+
+  // Calcular norma media de gradientes y guardarla en el modelo (§12.4)
+  let sumaCuad = 0;
+  let countGrad = 0;
+  for (const dWl of gradientes.dW) {
+    for (const g of dWl) { sumaCuad += g * g; countGrad++; }
+  }
+  for (const dbl of gradientes.db) {
+    for (const g of dbl) { sumaCuad += g * g; countGrad++; }
+  }
+  modelo.gradNormaMedia = countGrad > 0 ? Math.sqrt(sumaCuad / countGrad) : 0;
+
+  // Actualizar pesos
+  actualizarPesos(modelo, gradientes);
+
+  // FIX Bug#5: registrar en historial del modelo
+  const { J_test, accuracy_test } = evaluarTest(modelo, datosTest);
+  modelo.historial.push({
+    epoca: modelo.historial.length,
+    J_train,
+    J_test,
+    accuracy_test
+  });
+
+  return { J_train };
+}
+
+function evaluarTest(modelo, datosTest) {
+  // Evalúa el modelo en datos de test (sin dropout)
+  // Retorna: {J_test, accuracy_test}
+
+  if (datosTest.length === 0) return { J_test: 0, accuracy_test: 0 };
+
+  const X_test = datosTest.map(d => d.x);
+  const y_test = datosTest.map(d => d.y);
+  const tipoLoss = esTipoClasif ? 'bce' : 'mse'; // FIX Bug#4
+
+  // Forward pass (sin dropout)
+  const fwd = forward(modelo, X_test, false);
+
+  // Extraer predicciones
+  const yPred = fwd.activaciones[fwd.activaciones.length - 1].map(a => a[0]);
+
+  // Calcular loss
+  const J_test = calcularLoss(yPred, y_test, tipoLoss);
+
+  // Calcular accuracy (solo si clasificación)
+  let accuracy_test = null;
+  if (esTipoClasif) {
+    accuracy_test = calcularAccuracy(yPred, y_test);
+  }
+
+  return { J_test, accuracy_test };
+}
+
+// ============================================================================
+// SUBTAREA 1.7: CRITERIOS DE TERMINACIÓN (§12.4)
+// ============================================================================
+
+function verificarConvergencia(modelo) {
+  const h = modelo.historial;
+  if (h.length < 2) return false;
+
+  const J_actual   = h[h.length - 1].J_train;
+  const J_anterior = h[h.length - 2].J_train;
+
+  // Cond 1: cambio absoluto pequeño durante 30 épocas consecutivas
+  const cond1 = Math.abs(J_actual - J_anterior) < 1e-4;
+
+  if (cond1) {
+    modelo.contadorConv++;
+  } else {
+    modelo.contadorConv = 0;
+  }
+
+  if (modelo.contadorConv < 30) return false;
+
+  // Cond 2: el modelo debe haber mejorado al menos 15% respecto
+  // a su pérdida inicial — filtra modelos que nunca aprendieron nada
+  const J_inicial = h[0].J_train;
+  const mejora = (J_inicial - J_actual) / (J_inicial + 1e-8);
+
+  if (mejora < 0.15) return false;
+
+  // Cond 3: calidad mínima de generalización
+  // J_test final debe estar por debajo del 50% del baseline aleatorio
+  // Baseline clasificación: ln(2) ≈ 0.693  |  Baseline regresión: J_inicial
+  const ultimoH = h[h.length - 1];
+  const J_test_final = ultimoH.J_test ?? Infinity;
+  const baseline = esTipoClasif ? 0.693 : J_inicial;
+  const calidadOK = J_test_final < baseline * 0.50;
+
+  return calidadOK;
+}
+
+function verificarDivergencia(modelo, J_anterior) {
+  // Verifica si el modelo ha divergido
+  // §12.4: Dos tipos de divergencia
+  // 1. Explosión: J_train[t] > J_train[t−1] × 10  AND  J_train[t] > 1e-6
+  // 2. Colapso numérico: NaN o |peso| > 1e6
+
+  if (modelo.historial.length === 0) return { diverge: false, tipo: null };
+
+  const J_actual = modelo.historial[modelo.historial.length - 1].J_train;
+
+  // Tipo 1: Explosión
+  if (J_anterior && J_actual > J_anterior * 10 && J_actual > 1e-6) {
+    return { diverge: true, tipo: 'explosion' };
+  }
+
+  // Tipo 2: Colapso numérico
+  for (const W of modelo.pesos) {
+    for (const w of W) {
+      if (!isFinite(w) || Math.abs(w) > 1e6) {
+        return { diverge: true, tipo: 'colapso' };
+      }
+    }
+  }
+  for (const b of modelo.sesgos) {
+    for (const bi of b) {
+      if (!isFinite(bi) || Math.abs(bi) > 1e6) {
+        return { diverge: true, tipo: 'colapso' };
+      }
+    }
+  }
+
+  return { diverge: false, tipo: null };
+}
+
+/* BLOQUE DE PRUEBA 1.7
+console.log('=== PRUEBA 1.7: Criterios de convergencia y divergencia ===');
+
+// Test 1: Entrenar modelo — verificar que contadorConv NO dispara antes de 5 épocas
+const datos_17 = generarDatos('xor', 0, 0.8, 42);
+const datos_17_norm = normalizarDatos(datos_17.datosTrain, datos_17.datosTest);
+
+const modelo_17 = crearModelo([2, 4, 1], 'relu', 0.05, 0, 1, 'xavier');
+
+let J_ant = null;
+let epoch_conv = null;
+let max_contador_5 = 0;
+
+console.log('✓ Entrenando 100 épocas, monitoreando convergencia...');
+
+for (let ep = 0; ep < 100; ep++) {
+  const tr = entrenarEpoca(modelo_17, datos_17_norm.datosTrain);
+  const te = evaluarTest(modelo_17, datos_17_norm.datosTest);
+
+  modelo_17.historial.push({
+    epoch: ep,
+    J_train: tr.J_train,
+    J_test: te.J_test,
+    accuracy_test: te.accuracy_test
+  });
+
+  // Verificar divergencia
+  const divResult = verificarDivergencia(modelo_17, J_ant);
+  if (divResult.diverge) {
+    console.log(`  → Divergencia detectada en época ${ep}: tipo = ${divResult.tipo}`);
+    modelo_17.estado = 'divergente';
+    break;
+  }
+
+  J_ant = tr.J_train;
+
+  // Verificar convergencia (solo después de 5 épocas)
+  if (ep >= 5) {
+    const convResult = verificarConvergencia(modelo_17);
+    if (modelo_17.contadorConv > 0) {
+      max_contador_5 = Math.max(max_contador_5, modelo_17.contadorConv);
+    }
+    if (convResult) {
+      epoch_conv = ep;
+      console.log(`  → Convergencia detectada en época ${ep} (contador=${modelo_17.contadorConv})`);
+      console.log(`     gradNormaMedia = ${modelo_17.gradNormaMedia.toExponential(2)}`);
+      modelo_17.estado = 'convergido';
+      break;
+    }
+  }
+}
+
+console.log('✓ Prueba de no-disparo antes de 5 épocas:');
+console.log(`  Máximo contador en primeras épocas: ${max_contador_5}`);
+console.log(`  Debe ser < 5 (verificado: ${max_contador_5 < 5})`);
+
+console.log('✓ Resultado final:');
+console.log(`  Estado del modelo: ${modelo_17.estado}`);
+console.log(`  Épocas completadas: ${modelo_17.historial.length}`);
+console.log(`  gradNormaMedia última época: ${modelo_17.gradNormaMedia?.toExponential(2)}`);
+console.log(`  contadorConv final: ${modelo_17.contadorConv}`);
+
+// Test 2: Verificar detección de NaN y divergencia por colapso
+console.log('✓ Prueba de divergencia por colapso numérico:');
+const modelo_17_divergente = crearModelo([2, 4, 1], 'relu', 10.0, 0, 1, 'xavier'); // η muy alto
+
+for (let ep = 0; ep < 30; ep++) {
+  const tr = entrenarEpoca(modelo_17_divergente, datos_17_norm.datosTrain);
+  modelo_17_divergente.historial.push({
+    epoch: ep,
+    J_train: tr.J_train,
+    J_test: 0,
+    accuracy_test: 0
+  });
+
+  const divResult = verificarDivergencia(modelo_17_divergente, ep > 0 ? modelo_17_divergente.historial[ep - 1].J_train : null);
+  if (divResult.diverge) {
+    console.log(`  → Divergencia detectada en época ${ep}: ${divResult.tipo}`);
+    console.log(`    J_train = ${tr.J_train}`);
+    console.log(`    Pesos max: ${Math.max(...modelo_17_divergente.pesos.map(p => Math.max(...p)))}`);
+    break;
+  }
+
+  // Detectar colapso por NaN
+  const tieneNaN = modelo_17_divergente.pesos.some(w => w.some(v => !isFinite(v)));
+  if (tieneNaN) {
+    console.log(`  → NaN detectado en época ${ep}`);
+    break;
+  }
+}
+
+// Test 3: Historial y tendencia
+console.log('✓ Historial del modelo principal:');
+console.log('  Primeras 5 épocas (J_train):');
+for (let i = 0; i < Math.min(5, modelo_17.historial.length); i++) {
+  const decrece = i > 0 ? (modelo_17.historial[i].J_train < modelo_17.historial[i-1].J_train ? '↓' : '↑') : '-';
+  console.log(`    Época ${i}: J_train = ${modelo_17.historial[i].J_train.toFixed(6)} ${decrece}`);
+}
+
+*/
+
+// VERIFICACIÓN BUG#3-5: J_train debe bajar en 10 épocas
+{
+  const _d = generarDatos('espiral', 0, 0.8, 42);
+  const _dn = normalizarDatos(_d.datosTrain, _d.datosTest);
+  const _m = crearModelo([2, 4, 1], 'relu', 0.1, 0, 1, 'xavier');
+  console.log('[Bug#3-5 fix] Entrenando 10 épocas espiral:');
+  for (let ep = 0; ep < 10; ep++) {
+    const { J_train } = entrenarEpoca(_m, _dn.datosTrain);
+    const prev = ep > 0 ? _m.historial[ep - 1].J_train : null;
+    const flecha = prev !== null ? (J_train < prev ? '↓' : '↑') : '-';
+    console.log(`  Época ${ep}: J_train=${J_train.toFixed(6)} ${flecha}`);
+  }
+}
+
+/* BLOQUE DE PRUEBA 1.6
+console.log('\n=== PRUEBA 1.6: Entrenamiento y evaluación ===');
+
+// Test 1: Generar datos y entrenar una época
+const datos_16 = generarDatos('espiral', 0, 0.8, 42);
+const datos_16_norm = normalizarDatos(datos_16.datosTrain, datos_16.datosTest);
+
+const modelo_16 = crearModelo([2, 4, 1], 'relu', 0.1, 0, 1, 'xavier');
+
+// Época 0: evaluar antes de entrenar
+const eval_0 = evaluarTest(modelo_16, datos_16_norm.datosTest);
+console.log('✓ Época 0: J_test =', eval_0.J_test.toFixed(6), ', accuracy =', (eval_0.accuracy_test * 100).toFixed(1) + '%');
+
+// Entrenar una época
+const train_1 = entrenarEpoca(modelo_16, datos_16_norm.datosTrain);
+console.log('✓ Época 1 (train): J_train =', train_1.J_train.toFixed(6));
+
+// Evaluar después de la primera época
+const eval_1 = evaluarTest(modelo_16, datos_16_norm.datosTest);
+console.log('✓ Época 1 (test): J_test =', eval_1.J_test.toFixed(6), ', accuracy =', (eval_1.accuracy_test * 100).toFixed(1) + '%');
+
+// Test 2: Verificar que J_train disminuye en primeras épocas
+let J_anterior = train_1.J_train;
+for (let ep = 2; ep <= 5; ep++) {
+  const tr = entrenarEpoca(modelo_16, datos_16_norm.datosTrain);
+  console.log(`  Época ${ep}: J_train =`, tr.J_train.toFixed(6), (tr.J_train < J_anterior ? '↓' : '↑'));
+  J_anterior = tr.J_train;
+}
+
+*/ /* BLOQUE DE PRUEBA 1.5
+console.log('\n=== PRUEBA 1.5: Backpropagation ===');
+
+// Test 1: Crear un modelo y hacer un forward + backward
+const modelo_bp = crearModelo([2, 4, 1], 'relu', 0.05, 0, 42, 'xavier');
+const datos_bp = [[0.5, -0.3], [-0.2, 0.8]];
+const labels_bp = [1, 0];
+
+const fwd_bp = forward(modelo_bp, datos_bp, false);
+const gradientes = backprop(modelo_bp, fwd_bp.activaciones, fwd_bp.preActivaciones, labels_bp, 'bce');
+
+console.log('✓ Backprop completado');
+console.log('  Número de capas de gradientes: dW.length =', gradientes.dW.length, '(esperado 2)');
+console.log('  Primera capa: dW[0].length =', gradientes.dW[0].length, '(esperado 8)');
+console.log('  Primera capa: db[0].length =', gradientes.db[0].length, '(esperado 4)');
+console.log('  Segunda capa: dW[1].length =', gradientes.dW[1].length, '(esperado 4)');
+console.log('  Segunda capa: db[1].length =', gradientes.db[1].length, '(esperado 1)');
+
+// Test 2: Verificar que los gradientes no son todos 0
+const tieneGradientes = gradientes.dW.some(dw => Math.max(...dw) > 1e-8);
+console.log('✓ Gradientes no nulos:', tieneGradientes);
+
+// Test 3: Verificar magnitud razonable
+const maxGradW = Math.max(...gradientes.dW.map(dw => Math.max(...dw)));
+const minGradW = Math.min(...gradientes.dW.map(dw => Math.min(...dw)));
+console.log('✓ Rango de gradientes: [', minGradW.toFixed(6), ',', maxGradW.toFixed(6), ']');
+
+*/ /* BLOQUE DE PRUEBA 1.4
+console.log('\n=== PRUEBA 1.4: Loss y Accuracy ===');
+
+// Test 1: BCE con ŷ cercano a y (pérdida pequeña)
+const yPred_bueno = [0.99, 0.01, 0.95, 0.05];
+const yReal_bueno = [1, 0, 1, 0];
+const loss_bueno = calcularLoss(yPred_bueno, yReal_bueno, 'bce');
+console.log('✓ BCE aciertos: ŷ∈{0.99,0.01,0.95,0.05}, y∈{1,0,1,0}');
+console.log('  Loss:', loss_bueno.toFixed(6), '(debe ser pequeño < 0.1)');
+
+// Test 2: BCE con ŷ opuesto a y (pérdida grande)
+const yPred_malo = [0.01, 0.99, 0.05, 0.95];
+const yReal_malo = [1, 0, 1, 0];
+const loss_malo = calcularLoss(yPred_malo, yReal_malo, 'bce');
+console.log('✓ BCE desaciertos: ŷ∈{0.01,0.99,0.05,0.95}, y∈{1,0,1,0}');
+console.log('  Loss:', loss_malo.toFixed(6), '(debe ser grande > 2.0)');
+
+// Test 3: Verificar que loss_malo > loss_bueno
+console.log('✓ Validación: loss_malo > loss_bueno =', loss_malo > loss_bueno);
+
+// Test 4: Accuracy
+const accuracy_test = calcularAccuracy(yPred_bueno, yReal_bueno);
+console.log('✓ Accuracy (aciertos):', (accuracy_test * 100).toFixed(1) + '%', '(esperado 100%)');
+
+const accuracy_test_malo = calcularAccuracy(yPred_malo, yReal_malo);
+console.log('✓ Accuracy (desaciertos):', (accuracy_test_malo * 100).toFixed(1) + '%', '(esperado 0%)');
+
+// Test 5: MSE
+const yPred_regresion = [0.5, -0.3, 0.2];
+const yReal_regresion = [0.6, -0.2, 0.3];
+const loss_mse = calcularLoss(yPred_regresion, yReal_regresion, 'mse');
+console.log('✓ MSE: (0.5-0.6)² + (-0.3-(-0.2))² + (0.2-0.3)² = 0.0333...');
+console.log('  Loss calculado:', loss_mse.toFixed(6));
+
+*/ /* BLOQUE DE PRUEBA 1.3
+console.log('\n=== PRUEBA 1.3: Forward pass ===');
+
+// Test 1: Forward con modelo 2→4→1 y entrada simple
+const modelo_forward = crearModelo([2, 4, 1], 'relu', 0.05, 0, 1, 'xavier');
+const entrada_prueba = [0.5, -0.3];
+const resultado_forward = forward(modelo_forward, entrada_prueba, false);
+
+const nCapas_fwd = resultado_forward.activaciones.length; // debe ser 3 para [2,4,1]
+const iSalida_fwd = nCapas_fwd - 1; // índice de la capa de salida = 2
+const salida_fwd = resultado_forward.activaciones[iSalida_fwd][0][0];
+console.log('✓ Forward completado');
+console.log('  activaciones.length =', nCapas_fwd, '(esperado 3 para [2,4,1])');
+console.log('  Salida activaciones[' + iSalida_fwd + '][0][0] (debe estar en (0,1)):', salida_fwd);
+console.log('  Verificación: 0 < salida < 1 =', salida_fwd > 0 && salida_fwd < 1);
+
+// Test 2: Forward con batch completo
+const batch_prueba = [[0.5, -0.3], [-0.2, 0.8], [0.0, 0.0]];
+const resultado_batch = forward(modelo_forward, batch_prueba, false);
+const iSal_b = resultado_batch.activaciones.length - 1;
+console.log('✓ Forward con batch de 3 ejemplos');
+console.log('  Salida[0]:', resultado_batch.activaciones[iSal_b][0][0].toFixed(4));
+console.log('  Salida[1]:', resultado_batch.activaciones[iSal_b][1][0].toFixed(4));
+console.log('  Salida[2]:', resultado_batch.activaciones[iSal_b][2][0].toFixed(4));
+
+// Test 3: Verificar que todas las pre-activaciones se guardaron
+console.log('✓ Pre-activaciones guardadas:');
+console.log('  preActivaciones[0]:', resultado_batch.preActivaciones[0] === null);
+console.log('  preActivaciones[1].length:', resultado_batch.preActivaciones[1][0].length, '(esperado 4)');
+console.log('  preActivaciones[2].length:', resultado_batch.preActivaciones[2][0].length, '(esperado 1)');
+
+*/ /* BLOQUE DE PRUEBA 1.2
+console.log('\n=== PRUEBA 1.2: Creación de modelo e inicialización de pesos ===');
+
+// Test 1: Crear modelo [2,4,1] con Xavier
+const modelo_prueba = crearModelo([2, 4, 1], 'relu', 0.05, 0, 1, 'xavier');
+console.log('✓ Modelo creado: capas =', modelo_prueba.capas);
+console.log('  Número de capas de pesos:', modelo_prueba.pesos.length);
+console.log('  Primera capa (2→4): pesos.length =', modelo_prueba.pesos[0].length, '(esperado 8)');
+console.log('  Segunda capa (4→1): pesos.length =', modelo_prueba.pesos[1].length, '(esperado 4)');
+
+// Test 2: Verificar dimensiones de sesgos
+console.log('✓ Sesgos inicializados:');
+console.log('  Primera capa: sesgos.length =', modelo_prueba.sesgos[0].length, '(esperado 4)');
+console.log('  Segunda capa: sesgos.length =', modelo_prueba.sesgos[1].length, '(esperado 1)');
+console.log('  Todos los sesgos deben ser 0:', Math.max(...modelo_prueba.sesgos[0], ...modelo_prueba.sesgos[1]));
+
+// Test 3: Verificar rango de pesos Xavier
+const pesos_xavier = modelo_prueba.pesos[0];
+const minXavier = Math.min(...pesos_xavier);
+const maxXavier = Math.max(...pesos_xavier);
+const stdEsperada = Math.sqrt(2 / (2 + 4));
+console.log('✓ Distribución Xavier:');
+console.log('  Rango de pesos: [', minXavier.toFixed(3), ',', maxXavier.toFixed(3), ']');
+console.log('  σ esperada:', stdEsperada.toFixed(4), '(típicamente 3σ para 99.7%)');
+
+// Test 4: Reproducibilidad — misma semilla → mismos pesos
+const modelo_prueba2 = crearModelo([2, 4, 1], 'relu', 0.05, 0, 1, 'xavier');
+const sonIgualesPesos = pesos_xavier[0] === modelo_prueba2.pesos[0][0];
+console.log('✓ Reproducibilidad (semillaPesos=1): pesos idénticos =', sonIgualesPesos);
+
+// Test 5: Velocidades inicializadas en 0
+const velPesosVacio = Math.max(...modelo_prueba.velPesos[0]);
+console.log('✓ Velocidades inicializadas en 0:', velPesosVacio === 0);
+
+*/ /* BLOQUE DE PRUEBA 1.1
+console.log('\n=== PRUEBA 1.1: Generación y normalización de datos ===');
+
+// Test 1: Espiral con semilla fija
+const test1 = generarDatos('espiral', 0, 0.8, 42);
+console.log('✓ Espiral (sin ruido): datosTrain.length =', test1.datosTrain.length, 'datosTest.length =', test1.datosTest.length);
+console.log('  Primeros 2 datos train:', test1.datosTrain.slice(0, 2));
+
+// Test 2: Reproducibilidad — misma semilla produce idénticos resultados
+const test2a = generarDatos('espiral', 0, 0.8, 42);
+const test2b = generarDatos('espiral', 0, 0.8, 42);
+const sonIguales = test2a.datosTrain[0].x[0] === test2b.datosTrain[0].x[0];
+console.log('✓ Reproducibilidad (semilla 42):', sonIguales);
+
+// Test 3: Normalización
+const test3 = generarDatos('seno', 0, 0.8, 42);
+const test3_norm = normalizarDatos(test3.datosTrain, test3.datosTest);
+console.log('✓ Seno normalizado: entradas en rango [-1, 1]:',
+  Math.min(...test3_norm.datosTrain.map(d => d.x[0])), 'a',
+  Math.max(...test3_norm.datosTrain.map(d => d.x[0])));
+console.log('  Salidas en rango [-1, 1]:',
+  Math.min(...test3_norm.datosTrain.map(d => d.y)), 'a',
+  Math.max(...test3_norm.datosTrain.map(d => d.y)));
+
+// Test 4: Todos los problemas
+['espiral', 'circulos', 'xor', 'medialuna', 'seno'].forEach(p => {
+  const d = generarDatos(p, 0, 0.8, 42);
+  const n = normalizarDatos(d.datosTrain, d.datosTest);
+  console.log(`✓ ${p}: ${n.datosTrain.length} train, ${n.datosTest.length} test`);
+});
+
+*/ // FIN BLOQUES DE PRUEBA 1.x
+
+// ============================================================================
+// ETAPA 3 — SUBTAREA 3.1: GENERACIÓN DEL ENJAMBRE (módulo eta)
+// ============================================================================
+
+// Config actual del módulo eta (se sincroniza con DOM)
+let etaMinVal   = 0.01;
+let etaMaxVal   = 0.30;
+let nModelosEta = 6;
+
+function generarEnjambreEta(etaMin, etaMax, N) {
+  // Genera N modelos con η distribuidos linealmente entre etaMin y etaMax
+  // §6.1, §5.1, §11.1
+  modelos = [];
+  modeloReferencia  = null;
+  modeloSeleccionado = null;
+  modeloHover       = null;
+  // 2K: reiniciar estado Panel 2
+  J_max_epoca0  = 1.0;
+  modoLogPanel2 = false;
+  modoAccPanel2 = false;
+
+  const etas = [];
+  if (N === 1) {
+    etas.push(etaMin);
+  } else {
+    for (let i = 0; i < N; i++) {
+      etas.push(etaMin + (etaMax - etaMin) * i / (N - 1));
+    }
+  }
+
+  for (let i = 0; i < etas.length; i++) {
+    const eta_i = etas[i];
+    const m = crearModelo([2, 4, 1], 'relu', eta_i, 0, semillaDatos + i, 'xavier');
+    m.id      = i;
+    m.etiqueta = `η=${eta_i.toFixed(3)}`;
+
+    // Color según §11.1
+    const t = N === 1 ? 0 : i / (N - 1);
+    m.color = lerpColor(PALETAS.eta.azulVioleta, PALETAS.eta.naranja, t);
+
+    // Frontera inicial (época 0)
+    const grid = calcularGridPrediccion(m, 50);
+    m.frontera = calcularFrontera(grid, 50);
+
+    modelos.push(m);
+  }
+
+  // Modelo de referencia = primero (índice 0)
+  modeloReferencia = 0;
+  modeloMapa = modelos[0];
+  renderizarMapa(modelos[0]);
+
+  console.log('[Enjambre Eta] N modelos:', modelos.length);
+  console.log('[Enjambre Eta] etas:', modelos.map(m => m.eta.toFixed(4)));
+  console.log('[Enjambre Eta] fronteras[0]:', modelos[0].frontera.length, 'puntos');
+}
+
+// ── OVERLAY DOM para Panel 3 ─────────────────────────────────────────────────
+
+function crearOverlayPanel3() {
+  let overlay = document.getElementById('panel3-overlay');
+  if (overlay) overlay.remove();
+
+  overlay = document.createElement('div');
+  overlay.id = 'panel3-overlay';
+  overlay.innerHTML = `
+    <button id="btn-principal">Entrenar enjambre</button>
+    <hr class="p3-sep">
+    <div class="p3-row">
+      <label>Épocas máx.:&nbsp;<input type="number" id="input-epocas"
+        min="50" max="5000" step="50" value="200" style="width:56px"></label>
+      <label style="margin-left:10px">Velocidad:&nbsp;<select id="select-velocidad">
+        <option value="lenta">Lenta</option>
+        <option value="normal" selected>Normal</option>
+        <option value="rapida">Rápida</option>
+      </select></label>
+    </div>
+    <hr class="p3-sep">
+    <div class="p3-row">
+      <label>η mín.:&nbsp;<input type="range" id="slider-eta-min" style="width:110px"></label>
+      <span id="val-eta-min" style="margin-left:6px;min-width:38px">0.010</span>
+    </div>
+    <div class="p3-row" style="margin-top:2px">
+      <label>η máx.:&nbsp;<input type="range" id="slider-eta-max" style="width:110px"></label>
+      <span id="val-eta-max" style="margin-left:6px;min-width:38px">0.300</span>
+    </div>
+    <div class="p3-row" style="margin-top:4px">
+      Modelos:&nbsp;
+      <label><input type="radio" name="nmodelos" value="4">&nbsp;4</label>&nbsp;&nbsp;
+      <label><input type="radio" name="nmodelos" value="6" checked>&nbsp;6</label>&nbsp;&nbsp;
+      <label><input type="radio" name="nmodelos" value="8">&nbsp;8</label>&nbsp;&nbsp;
+      <label><input type="radio" name="nmodelos" value="10">&nbsp;10</label>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Configurar sliders log-scale: rango log10(0.001)..log10(0.5)
+  const SL_MIN  = Math.log10(0.001);   // -3
+  const SL_MAX  = Math.log10(0.5);     // ≈ -0.301
+  const SL_STEP = 'any';
+
+  const slMin = document.getElementById('slider-eta-min');
+  const slMax = document.getElementById('slider-eta-max');
+  slMin.min = SL_MIN; slMin.max = SL_MAX; slMin.step = SL_STEP;
+  slMax.min = SL_MIN; slMax.max = SL_MAX; slMax.step = SL_STEP;
+  slMin.value = Math.log10(etaMinVal);
+  slMax.value = Math.log10(etaMaxVal);
+
+  // ── Evento: botón principal ──
+  document.getElementById('btn-principal').addEventListener('click', () => {
+    if      (enEstado('IDLE'))      iniciarEntrenamiento();
+    else if (enEstado('RUNNING'))   detener();
+    else if (enEstado('PAUSED'))    continuar();
+    else if (enEstado('CONVERGED')) reiniciar();
+  });
+
+  // ── Evento: épocas máximas ──
+  document.getElementById('input-epocas').addEventListener('change', e => {
+    const v = parseInt(e.target.value);
+    if (!isNaN(v)) maximoEpocas = Math.max(50, Math.min(5000, v));
+  });
+
+  // ── Evento: velocidad ──
+  document.getElementById('select-velocidad').addEventListener('change', e => {
+    velocidad = e.target.value;
+  });
+
+  // ── Evento: slider eta-min ──
+  document.getElementById('slider-eta-min').addEventListener('input', e => {
+    let vMin = Math.pow(10, parseFloat(e.target.value));
+    if (vMin > 0.498) vMin = 0.500;
+    etaMinVal = vMin;
+    document.getElementById('val-eta-min').textContent = vMin.toFixed(3);
+    clearTimeout(_debounceEta);
+    _debounceEta = setTimeout(() => resetear(), 300);
+  });
+
+  // ── Evento: slider eta-max ──
+  document.getElementById('slider-eta-max').addEventListener('input', e => {
+    let vMax = Math.pow(10, parseFloat(e.target.value));
+    if (vMax > 0.498) vMax = 0.500;
+    etaMaxVal = vMax;
+    document.getElementById('val-eta-max').textContent = vMax.toFixed(3);
+    clearTimeout(_debounceEta);
+    _debounceEta = setTimeout(() => resetear(), 300);
+  });
+
+  // ── Evento: radio N modelos ──
+  document.querySelectorAll('input[name="nmodelos"]').forEach(r => {
+    r.addEventListener('change', () => {
+      nModelosEta = parseInt(r.value);
+      resetear();
+    });
+  });
+
+  posicionarOverlayPanel3();
+}
+
+function crearOverlayBarra() {
+  const div = document.createElement('div');
+  div.id = 'barra-overlay';
+  div.innerHTML = `
+    <label>Problema:
+      <select id="select-problema">
+        <option value="espiral">espiral</option>
+        <option value="circulos">círculos</option>
+        <option value="xor" selected>XOR</option>
+        <option value="medialuna">media luna</option>
+        <option value="seno">seno</option>
+      </select>
+    </label>
+    <label>Ruido: <input type="range" id="slider-ruido" min="0" max="50" step="1" value="0">
+      <span id="val-ruido">0%</span>
+    </label>
+    <label>Train: <input type="range" id="slider-train" min="50" max="90" step="5" value="80">
+      <span id="val-train">80%</span>
+    </label>
+    <button id="btn-semilla">⚄ semilla: ${semillaDatos}</button>
+  `;
+  document.body.appendChild(div);
+
+  const logo = document.createElement('div');
+  logo.id = 'logo-tallerna';
+  logo.innerHTML = 'Taller<span class="rna">RNA</span>';
+  div.appendChild(logo);
+
+  document.getElementById('select-problema').addEventListener('change', function() {
+    problema = this.value;
+    aplicarParametrosBarra();
+  });
+
+  document.getElementById('slider-ruido').addEventListener('input', e => {
+    nivelRuido = parseInt(e.target.value);
+    document.getElementById('val-ruido').textContent = nivelRuido + '%';
+  });
+  document.getElementById('slider-ruido').addEventListener('change', () => {
+    aplicarParametrosBarra();
+  });
+
+  document.getElementById('slider-train').addEventListener('input', e => {
+    trainRatio = parseInt(e.target.value) / 100;
+    document.getElementById('val-train').textContent = e.target.value + '%';
+  });
+  document.getElementById('slider-train').addEventListener('change', () => {
+    aplicarParametrosBarra();
+  });
+
+  document.getElementById('btn-semilla').addEventListener('click', function() {
+    semillaDatos = Math.floor(Math.random() * 10000);
+    this.textContent = '⚄ semilla: ' + semillaDatos;
+    aplicarParametrosBarra();
+  });
+}
+
+function posicionarOverlayBarra() {
+  // La barra tiene posición fija (top:0), solo necesita ajustar el ancho
+  const overlay = document.getElementById('barra-overlay');
+  if (overlay) overlay.style.width = windowWidth + 'px';
+}
+
+function aplicarParametrosBarra() {
+  if (enEstado('RUNNING') || enEstado('PAUSED')) {
+    notificar('Detén el entrenamiento antes de cambiar el problema');
+    return;
+  }
+  const resultado = generarDatos(problema, nivelRuido / 100, trainRatio, semillaDatos);
+  const norm = normalizarDatos(resultado.datosTrain, resultado.datosTest);
+  datosTrain = norm.datosTrain;
+  datosTest  = norm.datosTest;
+  resetear();
+  notificar(`Problema: ${problema} | Ruido: ${nivelRuido}% | Train: ${Math.round(trainRatio * 100)}%`);
+}
+
+function posicionarOverlayPanel3() {
+  const overlay = document.getElementById('panel3-overlay');
+  if (!overlay) return;
+  const r3 = panelRect(3);
+  // Dejar ~55px al fondo de Panel 3 para los círculos p5.js
+  overlay.style.left   = r3.x + 'px';
+  overlay.style.top    = (r3.y + 28) + 'px';   // 28px = alto del título p5.js
+  overlay.style.width  = r3.w + 'px';
+  overlay.style.height = Math.max(20, r3.h - 28 - 55) + 'px'; // 55px = zona de círculos
+}
+
+function actualizarUIEstado() {
+  const btn = document.getElementById('btn-principal');
+  if (!btn) return;
+
+  const etiquetas = {
+    IDLE: 'Entrenar enjambre', RUNNING: 'Detener',
+    PAUSED: 'Continuar',       CONVERGED: 'Reiniciar'
+  };
+  btn.textContent = etiquetas[estado] || 'Entrenar enjambre';
+
+  // Bloquear controles de config según §9.3
+  const bloqueado = enEstado('RUNNING', 'PAUSED');
+  ['slider-eta-min', 'slider-eta-max', 'input-epocas'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = bloqueado;
+  });
+  document.querySelectorAll('input[name="nmodelos"]').forEach(r => {
+    r.disabled = bloqueado;
+  });
+
+  // Bloquear controles de barra global durante entrenamiento (Subtarea 4)
+  const enMovimiento = enEstado('RUNNING', 'PAUSED');
+  ['select-problema', 'slider-ruido', 'slider-train', 'btn-semilla'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = enMovimiento;
+  });
+}
+
+// ============================================================================
+// FUNCIONES VACÍAS DE INICIALIZACIÓN (serán implementadas en Etapa 1)
+// ============================================================================
+
+function initDatos() {
+  // Será implementado en Etapa 1: generación de datos según problema
+  console.log('[Init] Datos no inicializados aún (Etapa 1)');
+}
+
+function initEnjambre() {
+  // Genera el enjambre según el módulo activo
+  if (moduloActivo === 'eta') {
+    generarEnjambreEta(etaMinVal, etaMaxVal, nModelosEta);
+  }
+  // Otros módulos: implementar en Etapa siguiente
+}
+
+function initHistorial() {
+  // Será implementado en Etapa 2: inicialización de historiales
+  console.log('[Init] Histórico no inicializado aún (Etapa 2)');
+}
+
+// ============================================================================
+// ETAPA 3 — SUBTAREA 3.2: LOOP DE ANIMACIÓN
+// ============================================================================
+
+function pasosPorFrame() {
+  // Número de épocas a ejecutar por frame según velocidad (§13.1)
+  if (velocidad === 'lenta')  return 1;
+  if (velocidad === 'rapida') return 25;
+  return 5; // 'normal'
+}
+
+function stepModelo(m) {
+  // Ejecuta una época completa para el modelo m y actualiza su estado.
+  // entrenarEpoca ya hace: stepCount++, historial.push() (FIX Bug#5)
+  if (m.estado !== 'activo') return;
+
+  // Leer J_ant ANTES de entrenar para pasarlo a verificarDivergencia
+  const J_ant = m.historial.length > 0
+    ? m.historial[m.historial.length - 1].J_train
+    : Infinity;
+
+  // Forward + backprop + actualizar pesos + push historial
+  entrenarEpoca(m, datosTrain);
+
+  // Verificar divergencia
+  const { diverge } = verificarDivergencia(m, J_ant);
+  if (diverge) {
+    const grid = calcularGridPrediccion(m, 50);
+    m.frontera = calcularFrontera(grid, 50);
+    m.estado = 'divergente';
+    console.log(`[stepModelo] ${m.etiqueta}: divergió en época ${m.historial.length}`);
+    return;
+  }
+
+  // Verificar límite de épocas
+  if (m.historial.length >= maximoEpocas) {
+    const grid = calcularGridPrediccion(m, 50);
+    m.frontera = calcularFrontera(grid, 50);
+    m.estado = 'no_convergido';
+    console.log(`[stepModelo] ${m.etiqueta}: no convergido (${m.historial.length} épocas)`);
+    return;
+  }
+
+  // Verificar convergencia (modifica m.contadorConv internamente)
+  if (verificarConvergencia(m)) {
+    const grid = calcularGridPrediccion(m, 50);
+    m.frontera = calcularFrontera(grid, 50);
+    m.estado = 'convergido';
+    m.epocaFinal = m.historial.length;
+    console.log(`[stepModelo] ${m.etiqueta}: convergido en época ${m.epocaFinal}`);
+  }
+}
+
+// ============================================================================
+// REDIMENSIONAMIENTO DE VENTANA
+// ============================================================================
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  posicionarOverlayBarra();
+  posicionarOverlayPanel3();
+  if (modeloMapa) {
+    renderizarMapa(modeloMapa);
+  }
+}
+  </script>
+</body>
+</html>
