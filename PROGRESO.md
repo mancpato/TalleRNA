@@ -1,9 +1,9 @@
 # PROGRESO: TalleRNA
 
-**Última actualización**: 2026-05-06
-**Etapa actual**: Barra global interactiva
+**Última actualización**: 2026-05-08
+**Etapa actual**: Módulo de Inicialización de pesos
 **Estado general**: Etapas 0–3 completas. Panel 2, Panel 4 básico y
-módulo Tasa de aprendizaje operativos.
+módulo Tasa de aprendizaje operativos. Barra global DOM terminada.
 
 ---
 
@@ -42,6 +42,12 @@ Círculos del enjambre con color propio + indicador de estado
 Conteo de modelos por estado (aprendizaje exitoso / divergentes /
 no convergidos / entrenando), mejor J_test y modelo ganador.
 
+### Barra global DOM interactiva ✅
+Selector de problema (XOR por defecto), sliders ruido/train con
+evento change (regenera al soltar), botón semilla (⚄). Problema
+seno deshabilitado en el selector con notificación. Logo TalleRNA
+eliminado (pendiente de solución simple).
+
 ---
 
 ## BUGS CORREGIDOS (post-Etapa 3)
@@ -59,17 +65,33 @@ no convergidos / entrenando), mejor J_test y modelo ganador.
 | B15 | Sin condición mínima de mejora — modelos sin aprendizaje marcaban "convergido" |
 | B16 | Clipping faltante en curvas Panel 2 → líneas fuera del área |
 | B17 | Fronteras invisibles post-entrenamiento (alfa=90, grosor=1) |
+| B18 | Normalización: min-max solo sobre train → puntos se movían al cambiar trainRatio |
+| B19 | Convergencia prematura sin generalización — ahora J_test < 50% del baseline |
 
 ---
 
 ## DECISIONES DE IMPLEMENTACIÓN (adicionales)
 
 - **Convergencia**: contadorConv ≥ 30 épocas de |ΔJ| < 1e-4 AND
-  mejora ≥ 15% sobre J_inicial. Evita falsos positivos con η pequeño.
-- **Círculos Panel 3**: color propio siempre; estado como anillo
+  mejora ≥ 15% sobre J_inicial AND J_test < 50% del baseline.
+  Evita falsos positivos con η pequeño y exige generalización.
+- **Círculos Panel 3**: SEP dinámico, DIAM=14. Métricas de accuracy
+  encima del círculo, η debajo. Color propio siempre; estado como anillo
   superpuesto (verde/rojo/gris). Identidad visual consistente entre paneles.
 - **Modelo seleccionado en Panel 1**: polilínea ordenada por ángulo
   (beginShape) en lugar de points, solo para el modelo activo.
+- **Normalización de datos**: min-max calculado sobre train+test completo
+  antes del split, aplicado a ambos conjuntos. Elimina desplazamiento
+  visual al cambiar trainRatio.
+- **Escala de ruido ajustada por problema**: espiral usa σ/4 para mantener
+  separabilidad visual con el mismo slider global.
+- **Checkbox "Mostrar curvas de test"**: movido al Panel 2 como botón
+  toggle [Test] junto a [Lin] y [J].
+- **Info en Panel 1**: n= y train= visibles en esquina superior derecha.
+- **Problema inicial**: cambiado a XOR (más pedagógico que espiral como punto de partida).
+- **initDatos() e initHistorial()**: vaciadas, sin console.log de depuración.
+- **Estructura de archivos**: proyecto separado en index.html + css/style.css + js/{config, motor_ml, 
+  ui, interaccion, main}.js para facilitar edición y prompts quirúrgicos.
 
 ---
 
@@ -77,19 +99,23 @@ no convergidos / entrenando), mejor J_test y modelo ganador.
 
 | Componente | Prioridad | Notas |
 |------------|-----------|-------|
-| **Barra global DOM** | 🔴 Inmediato | Selector problema, sliders ruido/train, botón ⚄ |
-| Módulo Inicialización | 🟡 Siguiente | Panel 3 con checkboxes dist. + semillas |
-| Módulo Activación | 🟡 | Checkboxes ReLU/Sigmoid/Tanh/Lineal/LeakyReLU |
+| **Módulo Inicialización** | 🔴 Inmediato | Panel 3 con checkboxes dist. + semillas. Etapa actual. |
+| Módulo Activación | 🟡 Siguiente | Checkboxes ReLU/Sigmoid/Tanh/Lineal/LeakyReLU |
 | Módulo Dropout | 🟡 | 6 modelos fijos p=0.0–0.5 |
 | Módulo Topología | 🟡 | Checkboxes T0–T7 |
 | Panel 4 completo | 🟠 | Tabla por modelo (η, J_train, J_test, acc, épocas) |
-| Regresión seno | 🟠 | Visualización 1D en Panel 1 |
+| Regresión seno | 🟠 | Visualización 1D en Panel 1. Selector deshabilitado por ahora. |
 
 ---
 
-## PRÓXIMA SESIÓN: Barra global DOM
+## PRÓXIMA SESIÓN: Módulo de Inicialización de pesos
 
-Variables globales ya declaradas y usadas: `problema`, `nivelRuido`,
-`trainRatio`, `semillaDatos`. La función `generarDatos()` ya acepta
-los 4 problemas de clasificación + seno. Solo falta hacer la barra
-interactiva con elementos DOM.
+Implementar el módulo de inicialización según §6.2 de la especificación:
+checkboxes para Uniforme/Normal/Xavier/He, selector de semillas por
+distribución (1–3), generación de hasta 12 modelos, esquema de color
+por distribución + opacidad por semilla (§11.2).
+
+Dependencias listas: `crearModelo()` ya acepta `distribucion` y
+`semillaPesos`; la función `inicializarPesos()` está implementada.
+Solo falta el UI del Panel 3 y la lógica de `generarEnjambre()` para
+el módulo `init`.
