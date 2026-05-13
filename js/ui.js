@@ -883,12 +883,13 @@ function crearOverlayPanel3() {
     <div id="controles-eta">
       <div class="p3-row">
         <label>Épocas máx.:&nbsp;<input type="number" id="input-epocas"
-          min="50" max="5000" step="50" value="200" style="width:56px"></label>
+          min="50" max="5000" step="50" value="500" style="width:56px"></label>
         <label style="margin-left:10px">Velocidad:&nbsp;<select id="select-velocidad">
           <option value="lenta">Lenta</option>
           <option value="normal" selected>Normal</option>
           <option value="rapida">Rápida</option>
         </select></label>
+        <button id="btn-paso-eta" style="margin-left:10px">+100</button>
       </div>
       <hr class="p3-sep">
       <div class="p3-row">
@@ -911,12 +912,13 @@ function crearOverlayPanel3() {
     <div id="controles-init" style="display:none">
       <div class="p3-row">
         <label>Épocas máx.:&nbsp;<input type="number" id="input-epocas-init"
-          min="50" max="5000" step="50" value="200" style="width:56px"></label>
+          min="50" max="5000" step="50" value="500" style="width:56px"></label>
         <label style="margin-left:10px">Velocidad:&nbsp;<select id="select-velocidad-init">
           <option value="lenta">Lenta</option>
           <option value="normal" selected>Normal</option>
           <option value="rapida">Rápida</option>
         </select></label>
+        <button id="btn-paso-init" style="margin-left:10px">+100</button>
       </div>
       <hr class="p3-sep">
       <div style="font-size:12px;margin-bottom:3px">Distribuciones:</div>
@@ -1029,6 +1031,11 @@ function crearOverlayPanel3() {
       _debounceInit = setTimeout(() => resetear(), 300);
     });
   });
+
+  document.getElementById('btn-paso-eta')
+    .addEventListener('click', avanzar100);
+  document.getElementById('btn-paso-init')
+    .addEventListener('click', avanzar100);
 
   posicionarOverlayPanel3();
 }
@@ -1156,6 +1163,12 @@ function actualizarUIEstado() {
     r.disabled = bloqueado;
   });
 
+  const bloqueadoPaso = enEstado('RUNNING', 'CONVERGED');
+  const btnPasoEta  = document.getElementById('btn-paso-eta');
+  const btnPasoInit = document.getElementById('btn-paso-init');
+  if (btnPasoEta)  btnPasoEta.disabled  = bloqueadoPaso;
+  if (btnPasoInit) btnPasoInit.disabled = bloqueadoPaso;
+
   const enMovimiento = enEstado('RUNNING', 'PAUSED');
   ['select-problema', 'slider-ruido', 'slider-train', 'btn-semilla'].forEach(id => {
     const el = document.getElementById(id);
@@ -1206,6 +1219,39 @@ function dibujarRedPanel4() {
         if (Math.abs(w) > wMax) wMax = Math.abs(w);
   }
 
+  const TB = 8;
+  const xBias = [
+    xs[0] + (xs[1] - xs[0]) * 0.28,
+    xs[1] + (xs[2] - xs[1]) * 0.28
+  ];
+  const yBias = [
+    Math.max(...ys[0], ...ys[1]) + RADIO * 2.2 - TB * 2,
+    Math.max(...ys[1], ...ys[2]) + RADIO * 2.2 - TB * 2
+  ];
+
+  // Conexiones bias
+  for (let c = 0; c < 2; c++) {
+    const nOut = capas[c + 1];
+    for (let j = 0; j < nOut; j++) {
+      let cr, cg, cb, alfa, grosor;
+      if (m && m.sesgos && m.sesgos[c]) {
+        const w = m.sesgos[c][j];
+        const t = Math.min(Math.abs(w) / wMax, 1);
+        grosor = 0.5 + t * 3.0;
+        alfa   = 50 + t * 200;
+        if (w >= 0) { cr = 60;  cg = 100; cb = 210; }
+        else        { cr = 210; cg = 60;  cb = 60;  }
+      } else {
+        cr = 160; cg = 160; cb = 160;
+        grosor = 0.7; alfa = 70;
+      }
+      stroke(cr, cg, cb, alfa);
+      strokeWeight(grosor);
+      line(xBias[c], yBias[c], xs[c + 1], ys[c + 1][j]);
+    }
+  }
+
+  // Conexiones regulares
   for (let c = 0; c < nCapas - 1; c++) {
     const nIn  = capas[c];
     const nOut = capas[c + 1];
@@ -1239,6 +1285,17 @@ function dibujarRedPanel4() {
     }
   }
 
+  // Nodos bias (triángulos amarillos)
+  fill(255, 220, 50); stroke(180, 150, 0); strokeWeight(1.5);
+  for (let c = 0; c < 2; c++) {
+    const bx = xBias[c];
+    const by = yBias[c];
+    triangle(bx,      by - TB,     // vértice superior (punta)
+           bx - TB, by + TB,     // vértice inferior izquierdo
+           bx + TB, by + TB);    // vértice inferior derecho
+    //triangle(bx - TB, by - TB, bx + TB, by - TB, bx, by + TB);
+  }
+
   noStroke(); fill(60); textSize(11); textAlign(CENTER, BOTTOM);
   const etiqCapa = ['Entrada', 'Oculta', 'Salida'];
   for (let c = 0; c < nCapas; c++)
@@ -1258,9 +1315,9 @@ function dibujarRedPanel4() {
   textStyle(NORMAL);
 
   if (m) {
-    noStroke(); textSize(9); textAlign(LEFT, BOTTOM);
-    fill(60, 100, 210);  text('+ positivo', rx0, r.y + r.h - 2);
-    fill(210, 60, 60);   text('− negativo', rx0 + 62, r.y + r.h - 2);
-    fill(130);           text('grosor=|w|', rx0 + 124, r.y + r.h - 2);
+    noStroke(); textSize(12); textAlign(LEFT, BOTTOM);
+    fill(60, 100, 210);  text('+ positivo', rx0, r.y + r.h - 7);
+    fill(210, 60, 60);   text('− negativo', rx0 + 62, r.y + r.h - 7);
+    fill(130);           text('grosor = |w|', rx0 + 124, r.y + r.h - 7);
   }
 }

@@ -93,6 +93,7 @@ function reiniciar()
   actualizarUIEstado();
   modeloReferencia = null;
   distribucionSeleccionada = null;
+  _epochTarget = null;
   initEnjambre();
 }
 
@@ -103,7 +104,25 @@ function resetear()
   actualizarUIEstado();
   modeloReferencia = null;
   distribucionSeleccionada = null;
+  _epochTarget = null;
   initEnjambre();
+}
+
+function avanzar100()
+{
+  if (enEstado('CONVERGED')) return;
+
+  const epActual = modelos.length > 0
+    ? Math.max(...modelos.map(m => m.historial.length))
+    : 0;
+  _epochTarget = epActual + 100;
+
+  if (enEstado('IDLE')) {
+    iniciarEntrenamiento();
+  } else if (enEstado('PAUSED')) {
+    transicionar('RUNNING');
+    actualizarUIEstado();
+  }
 }
 
 function notificar(texto) 

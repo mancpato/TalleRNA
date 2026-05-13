@@ -75,13 +75,24 @@ function draw() {
   if (enEstado('RUNNING')) {
     const pasos = pasosPorFrame();
     for (let p = 0; p < pasos; p++) {
-      for (const m of modelos) 
-        if (m.estado === 'activo') 
+      for (const m of modelos)
+        if (m.estado === 'activo')
           stepModelo(m);
-        
+
       if (modelos.length > 0 && modelos.every(m => m.estado !== 'activo')) {
         converger();
         break;
+      }
+
+      if (_epochTarget !== null) {
+        const epMax = modelos
+          .filter(m => m.estado === 'activo')
+          .reduce((acc, m) => Math.max(acc, m.historial.length), 0);
+        if (epMax >= _epochTarget) {
+          _epochTarget = null;
+          detener();
+          break;
+        }
       }
     }
 

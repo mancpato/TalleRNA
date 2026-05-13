@@ -70,7 +70,7 @@ let moduloActivo = 'eta';
 let estado = 'IDLE';
 
 let velocidad = 'normal';
-let maximoEpocas = 200;
+let maximoEpocas = 500;
 let mostrarCurvasTest = false;
 
 let modelos = [];
@@ -83,6 +83,7 @@ let _gruposHitAreas = [];
 let notificacion = { texto: '', frameInicio: -200, duracion: 120 };
 
 let fronteraUpdateIdx = 0;
+let _epochTarget = null;
 let _debounceEta = null;
 
 let J_max_epoca0 = 1.0;
