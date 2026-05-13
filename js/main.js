@@ -69,22 +69,8 @@ function draw() {
   dibujarHistorialPanel2();
   dibujarControlesPanel3();
   dibujarResumenPanel4();
+  dibujarRedPanel4();
   dibujarNotificacion();
-
-  // TalleRNA: Taller de Redes Neuronales Artificiales
-  const xArq = windowWidth - 10; // donde empieza el texto de arquitectura (alineado derecha)
-  const xSemilla = 500;          // ajusta este valor según tu pantalla
-  const xLogo = (xSemilla + xArq) / 2;
-
-  textAlign(CENTER, CENTER);
-  textStyle(BOLD);
-  textSize(24);
-  noStroke();
-  fill(60);
-  text('Talle', xLogo - textWidth('RNA')/2, TOOLBAR_HEIGHT/2);
-  fill(123, 82, 212);
-  text('RNA', xLogo + textWidth('Talle')/2, TOOLBAR_HEIGHT/2);
-  textStyle(NORMAL);
 
   if (enEstado('RUNNING')) {
     const pasos = pasosPorFrame();

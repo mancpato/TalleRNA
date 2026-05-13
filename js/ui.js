@@ -38,19 +38,23 @@ function dibujarBarraGlobal() {
   fill(245, 245, 245);
   stroke(200);
   strokeWeight(1);
-  rect(0, 0, windowWidth, h);
+  rect(0, TAB_HEIGHT, windowWidth, h);
 
-  /* textAlign(CENTER, CENTER);
-  textSize(22);
-  fill(60);    text('Taller', windowWidth/2 - textWidth('RNA')/2 - textWidth('Taller')/2, TOOLBAR_HEIGHT/2);
-  fill(123, 82, 212);  text('RNA', windowWidth/2 + textWidth('Taller')/2 - textWidth('RNA')/2, TOOLBAR_HEIGHT/2); */
+  let textoArq;
+  if (moduloActivo === 'eta') {
+    textoArq = `2→4→1 · ReLU · η∈[${etaMinVal.toFixed(3)}, ${etaMaxVal.toFixed(3)}] · SGD+mom`;
+  } else if (moduloActivo === 'init') {
+    textoArq = '2→4→1 · ReLU · η=0.05 · SGD+mom';
+  } else {
+    textoArq = '2→4→1 · ReLU · η=0.05 · SGD+mom';
+  }
 
-  fill(100); textSize(12); textAlign(RIGHT, CENTER);
-  text('2→4→1 · ReLU · SGD+mom', windowWidth - 12, h / 2);
+  fill(100); textSize(11); textAlign(RIGHT, CENTER);
+  text(textoArq, windowWidth - 12, TAB_HEIGHT + h / 2);
 }
 
 function dibujarPestanas() {
-  const y = TOOLBAR_HEIGHT;
+  const y = 0;
   const h = TAB_HEIGHT;
   const pestanas = [
     { label: 'Tasa de aprendizaje', id: 'eta' },
@@ -77,6 +81,13 @@ function dibujarPestanas() {
     text(p.label, x + ancho_pestaña / 2, y + h / 2);
     x += ancho_pestaña + 2;
   }
+
+  noStroke(); textStyle(BOLD); textSize(20); textAlign(RIGHT, CENTER);
+  fill(123, 82, 212);
+  text('RNA', windowWidth - 12, h / 2);
+  fill(60);
+  text('Taller', windowWidth - 12 - textWidth('RNA'), h / 2);
+  textStyle(NORMAL);
 }
 
 function dibujarPaneles() {
@@ -111,13 +122,20 @@ function dibujarPanel(id, titulo, r) {
 
 function dibujarControlesPanel3() {
   if (!modelos || modelos.length === 0) return;
-
   const r3 = panelRect(3);
+  if (moduloActivo === 'init') {
+    _dibujarCirculosInit(r3);
+  } else {
+    _dibujarCirculosEta(r3);
+  }
+}
+
+function _dibujarCirculosEta(r3) {
   const DIAM   = 10;
-  const SEP    = 48;   
+  const SEP    = 48;
   const totalW = modelos.length * SEP - (SEP - DIAM);
   const cirX0  = r3.x + (r3.w - totalW) / 2;
-  const cirY   = r3.y + r3.h - 40; 
+  const cirY   = r3.y + r3.h - 40;
 
   for (let i = 0; i < modelos.length; i++) {
     const m  = modelos[i];
@@ -166,12 +184,111 @@ function dibujarControlesPanel3() {
       } else {
         metrica = ''; fill(120);
       }
-      if (metrica) 
+      if (metrica)
         text(metrica, cx, cirY - DIAM/2 - 8);
     }
 
     noStroke(); fill(80); textSize(12); textAlign(CENTER, TOP);
+    if (i === 0) {
+      noStroke(); fill(80); textSize(14);
+      textAlign(RIGHT, TOP);
+      text('η = ', cirX0 - 20, cirY + DIAM/2 + 5);
+      textAlign(CENTER, TOP);
+    }
     text(m.eta.toFixed(3), cx, cirY + DIAM/2 + 6);
+  }
+}
+
+function _dibujarCirculosInit(r3) {
+  const DISTS  = ['uniforme', 'normal', 'xavier', 'he'];
+  const NOMBRES = { uniforme: 'Uniforme', normal: 'Normal',
+                    xavier: 'Xavier', he: 'He' };
+  const DIAM   = 14;
+  const RING   = DIAM + 5;
+  const SEP_C  = 34;
+  const SEP_G  = 48;
+  const cirY   = r3.y + r3.h - 36;
+
+  const gruposActivos = DISTS.filter(d =>
+    modelos.some(m => m.etiqueta.startsWith(d)));
+  const S = semillasPorDist;
+  const anchoGrupo = SEP_C * (S - 1) + DIAM;
+  const anchoTotal = gruposActivos.length * anchoGrupo +
+                     (gruposActivos.length - 1) * SEP_G;
+  let gx = r3.x + (r3.w - anchoTotal) / 2;
+
+  for (const dist of gruposActivos) {
+    const modelosDist = modelos.filter(m => m.etiqueta.startsWith(dist));
+
+    if (dist === gruposActivos[0]) _gruposHitAreas = [];
+
+    textSize(12); textStyle(BOLD);
+    const wNombre = textWidth(NOMBRES[dist]);
+    const xNombre = gx + anchoGrupo / 2 - wNombre / 2;
+    const yNombre = cirY - DIAM / 2 - 26;
+    _gruposHitAreas.push({ dist, x: xNombre - 4, y: yNombre - 2,
+                           w: wNombre + 8, h: 16 });
+
+    noStroke();
+    if (distribucionSeleccionada === dist) {
+      fill(220, 220, 255);
+      rect(xNombre - 4, yNombre - 2, wNombre + 8, 16, 3);
+      fill(40);
+    } else {
+      fill(80);
+    }
+    textStyle(BOLD); textAlign(CENTER, BOTTOM);
+    text(NOMBRES[dist], gx + anchoGrupo / 2, cirY - DIAM / 2 - 14);
+    textStyle(NORMAL);
+
+    for (let s = 0; s < modelosDist.length; s++) {
+      const m   = modelosDist[s];
+      const idx = modelos.indexOf(m);
+      const cx  = gx + s * SEP_C;
+      const c   = m.color;
+
+      fill(red(c), green(c), blue(c), alpha(c));
+      noStroke();
+      ellipse(cx, cirY, DIAM);
+
+      noFill();
+      if (m.estado === 'convergido') {
+        stroke(46, 204, 113); strokeWeight(2);
+        ellipse(cx, cirY, RING);
+      } else if (m.estado === 'divergente') {
+        stroke(226, 75, 74); strokeWeight(2);
+        ellipse(cx, cirY, RING);
+        const d = DIAM * 0.38; strokeWeight(1.5);
+        line(cx - d, cirY - d, cx + d, cirY + d);
+        line(cx + d, cirY - d, cx - d, cirY + d);
+      } else if (m.estado === 'no_convergido') {
+        stroke(150); strokeWeight(1.5);
+        ellipse(cx, cirY, RING);
+      }
+
+      if (modeloSeleccionado === idx) {
+        noFill(); stroke(30); strokeWeight(2);
+        ellipse(cx, cirY, RING + 6);
+      } else if (modeloHover === idx) {
+        noFill(); stroke(100); strokeWeight(1);
+        ellipse(cx, cirY, RING + 4);
+      }
+
+      if (m.historial && m.historial.length > 0) {
+        const ult = m.historial[m.historial.length - 1];
+        if (ult.accuracy_test !== undefined && ult.accuracy_test !== null) {
+          const acc = ult.accuracy_test;
+          fill(acc > 0.75 ? color(46, 180, 90) : acc > 0.50 ? color(200, 160, 0) : color(160));
+          noStroke(); textSize(10); textAlign(CENTER, BOTTOM);
+          text((acc * 100).toFixed(0) + '%', cx, cirY - DIAM / 2 - 2);
+        }
+      }
+
+      noStroke(); fill(120); textSize(10); textAlign(CENTER, TOP);
+      text('s' + (s + 1), cx, cirY + DIAM / 2 + 5);
+    }
+
+    gx += anchoGrupo + SEP_G;
   }
 }
 
@@ -319,6 +436,20 @@ function _ordenarFrontera(puntos) {
   });
 }
 
+function _modeloDestacado(i) {
+  if (modeloSeleccionado !== null) return i === modeloSeleccionado;
+  if (distribucionSeleccionada !== null)
+    return modelos[i].etiqueta.startsWith(distribucionSeleccionada);
+  return false;
+}
+
+function _modeloAtenuado(i) {
+  if (modeloSeleccionado !== null) return i !== modeloSeleccionado;
+  if (distribucionSeleccionada !== null)
+    return !modelos[i].etiqueta.startsWith(distribucionSeleccionada);
+  return false;
+}
+
 function dibujarFronterasPanel1() {
   if (!modelos || modelos.length === 0) return;
   noFill();
@@ -327,15 +458,16 @@ function dibujarFronterasPanel1() {
     if (!m.frontera || m.frontera.length === 0) continue;
 
     let grosor, alfa;
-    if (modeloSeleccionado === i) { grosor = 3; alfa = 255; }
-    else if (modeloHover === i) { grosor = 2.5; alfa = 230; }
-    else { grosor = 2; alfa = 180; }
+    if (_modeloDestacado(i))     { grosor = 3;   alfa = 255; }
+    else if (modeloHover === i)  { grosor = 2.5; alfa = 230; }
+    else if (_modeloAtenuado(i)) { grosor = 1;   alfa = 40;  }
+    else                         { grosor = 2;   alfa = 180; }
 
     const c = m.color;
     stroke(red(c), green(c), blue(c), alfa);
     strokeWeight(grosor);
 
-    if (modeloSeleccionado === i) {
+    if (_modeloDestacado(i) && modeloSeleccionado === i) {
       const ordenados = _ordenarFrontera(m.frontera);
       beginShape();
       for (const pt of ordenados) {
@@ -607,12 +739,12 @@ function dibujarHistorialPanel2() {
 
     const c = m.color;
     let alfa;
-    if (modeloSeleccionado === i)   alfa = 255;
-    else if (modeloHover === i)     alfa = 200;
-    else                            alfa = 60;
+    if (_modeloDestacado(i))      { alfa = 255; strokeWeight(2.5); }
+    else if (modeloHover === i)   { alfa = 200; strokeWeight(2.0); }
+    else if (_modeloAtenuado(i))  { alfa = 30;  strokeWeight(1.0); }
+    else                          { alfa = 60;  strokeWeight(1.5); }
 
     stroke(red(c), green(c), blue(c), alfa);
-    strokeWeight(modeloSeleccionado === i ? 2 : 1);
     noFill();
 
     beginShape();
@@ -747,36 +879,70 @@ function crearOverlayPanel3() {
   overlay.innerHTML = `
     <button id="btn-principal">Entrenar enjambre</button>
     <hr class="p3-sep">
-    <div class="p3-row">
-      <label>Épocas máx.:&nbsp;<input type="number" id="input-epocas"
-        min="50" max="5000" step="50" value="200" style="width:56px"></label>
-      <label style="margin-left:10px">Velocidad:&nbsp;<select id="select-velocidad">
-        <option value="lenta">Lenta</option>
-        <option value="normal" selected>Normal</option>
-        <option value="rapida">Rápida</option>
-      </select></label>
+
+    <div id="controles-eta">
+      <div class="p3-row">
+        <label>Épocas máx.:&nbsp;<input type="number" id="input-epocas"
+          min="50" max="5000" step="50" value="200" style="width:56px"></label>
+        <label style="margin-left:10px">Velocidad:&nbsp;<select id="select-velocidad">
+          <option value="lenta">Lenta</option>
+          <option value="normal" selected>Normal</option>
+          <option value="rapida">Rápida</option>
+        </select></label>
+      </div>
+      <hr class="p3-sep">
+      <div class="p3-row">
+        <label>η mín.:&nbsp;<input type="range" id="slider-eta-min" style="width:110px"></label>
+        <span id="val-eta-min" style="margin-left:6px;min-width:38px">0.010</span>
+      </div>
+      <div class="p3-row" style="margin-top:2px">
+        <label>η máx.:&nbsp;<input type="range" id="slider-eta-max" style="width:110px"></label>
+        <span id="val-eta-max" style="margin-left:6px;min-width:38px">0.300</span>
+      </div>
+      <div class="p3-row" style="margin-top:4px">
+        Modelos:&nbsp;
+        <label><input type="radio" name="nmodelos" value="4">&nbsp;4</label>&nbsp;&nbsp;
+        <label><input type="radio" name="nmodelos" value="6" checked>&nbsp;6</label>&nbsp;&nbsp;
+        <label><input type="radio" name="nmodelos" value="8">&nbsp;8</label>&nbsp;&nbsp;
+        <label><input type="radio" name="nmodelos" value="10">&nbsp;10</label>
+      </div>
     </div>
-    <hr class="p3-sep">
-    <div class="p3-row">
-      <label>η mín.:&nbsp;<input type="range" id="slider-eta-min" style="width:110px"></label>
-      <span id="val-eta-min" style="margin-left:6px;min-width:38px">0.010</span>
-    </div>
-    <div class="p3-row" style="margin-top:2px">
-      <label>η máx.:&nbsp;<input type="range" id="slider-eta-max" style="width:110px"></label>
-      <span id="val-eta-max" style="margin-left:6px;min-width:38px">0.300</span>
-    </div>
-    <div class="p3-row" style="margin-top:4px">
-      Modelos:&nbsp;
-      <label><input type="radio" name="nmodelos" value="4">&nbsp;4</label>&nbsp;&nbsp;
-      <label><input type="radio" name="nmodelos" value="6" checked>&nbsp;6</label>&nbsp;&nbsp;
-      <label><input type="radio" name="nmodelos" value="8">&nbsp;8</label>&nbsp;&nbsp;
-      <label><input type="radio" name="nmodelos" value="10">&nbsp;10</label>
+
+    <div id="controles-init" style="display:none">
+      <div class="p3-row">
+        <label>Épocas máx.:&nbsp;<input type="number" id="input-epocas-init"
+          min="50" max="5000" step="50" value="200" style="width:56px"></label>
+        <label style="margin-left:10px">Velocidad:&nbsp;<select id="select-velocidad-init">
+          <option value="lenta">Lenta</option>
+          <option value="normal" selected>Normal</option>
+          <option value="rapida">Rápida</option>
+        </select></label>
+      </div>
+      <hr class="p3-sep">
+      <div style="font-size:12px;margin-bottom:3px">Distribuciones:</div>
+      <div class="p3-row" style="flex-wrap:wrap;gap:4px">
+        <label><input type="checkbox" id="cb-uniforme" checked>&nbsp;Uniforme</label>
+        <label><input type="checkbox" id="cb-normal"   checked>&nbsp;Normal</label>
+        <label><input type="checkbox" id="cb-xavier"   checked>&nbsp;Xavier</label>
+        <label><input type="checkbox" id="cb-he"       checked>&nbsp;He</label>
+      </div>
+      <hr class="p3-sep">
+      <div class="p3-row" style="margin-top:2px">
+        <span style="font-size:12px">Semillas:&nbsp;</span>
+        <label><input type="radio" name="semillas" value="1" checked>&nbsp;1</label>&nbsp;&nbsp;
+        <label><input type="radio" name="semillas" value="2">&nbsp;2</label>&nbsp;&nbsp;
+        <label><input type="radio" name="semillas" value="3">&nbsp;3</label>
+      </div>
+      <div style="font-size:11px;color:#666;margin-top:4px">
+        Total de modelos: <span id="span-total-modelos">4</span>
+      </div>
     </div>
   `;
   document.body.appendChild(overlay);
 
-  const SL_MIN  = Math.log10(0.001);   
-  const SL_MAX  = Math.log10(0.5);     
+  // --- Controles ETA ---
+  const SL_MIN  = Math.log10(0.001);
+  const SL_MAX  = Math.log10(0.5);
   const SL_STEP = 'any';
 
   const slMin = document.getElementById('slider-eta-min');
@@ -827,7 +993,56 @@ function crearOverlayPanel3() {
     });
   });
 
+  // --- Controles INIT ---
+  document.getElementById('input-epocas-init').addEventListener('change', e => {
+    const v = parseInt(e.target.value);
+    if (!isNaN(v)) maximoEpocas = Math.max(50, Math.min(5000, v));
+  });
+
+  document.getElementById('select-velocidad-init').addEventListener('change', e => {
+    velocidad = e.target.value;
+  });
+
+  const _cbIds = ['cb-uniforme', 'cb-normal', 'cb-xavier', 'cb-he'];
+  const _cbDists = ['uniforme', 'normal', 'xavier', 'he'];
+
+  _cbIds.forEach((id, idx) => {
+    document.getElementById(id).addEventListener('change', () => {
+      const activas = _cbDists.filter((_, i) => document.getElementById(_cbIds[i]).checked);
+      if (activas.length === 0) {
+        document.getElementById(id).checked = true;
+        notificar('Al menos una distribución debe estar activa');
+        return;
+      }
+      distActivas = activas;
+      _actualizarTotalModelos();
+      clearTimeout(_debounceInit);
+      _debounceInit = setTimeout(() => resetear(), 300);
+    });
+  });
+
+  document.querySelectorAll('input[name="semillas"]').forEach(r => {
+    r.addEventListener('change', () => {
+      semillasPorDist = parseInt(r.value);
+      _actualizarTotalModelos();
+      clearTimeout(_debounceInit);
+      _debounceInit = setTimeout(() => resetear(), 300);
+    });
+  });
+
   posicionarOverlayPanel3();
+}
+
+function _actualizarTotalModelos() {
+  const span = document.getElementById('span-total-modelos');
+  if (span) span.textContent = distActivas.length * semillasPorDist;
+}
+
+function actualizarModuloOverlay() {
+  const divEta  = document.getElementById('controles-eta');
+  const divInit = document.getElementById('controles-init');
+  if (divEta)  divEta.style.display  = moduloActivo === 'eta'  ? 'block' : 'none';
+  if (divInit) divInit.style.display = moduloActivo === 'init' ? 'block' : 'none';
 }
 
 function crearOverlayBarra() {
@@ -883,7 +1098,9 @@ function crearOverlayBarra() {
 
 function posicionarOverlayBarra() {
   const overlay = document.getElementById('barra-overlay');
-  if (overlay) overlay.style.width = windowWidth + 'px';
+  if (!overlay) return;
+  overlay.style.width = windowWidth + 'px';
+  overlay.style.top   = TAB_HEIGHT + 'px';
 }
 
 function aplicarParametrosBarra() {
@@ -896,7 +1113,6 @@ function aplicarParametrosBarra() {
   datosTrain = norm.datosTrain;
   datosTest  = norm.datosTest;
   resetear();
-  notificar(`Problema: ${problema} | Ruido: ${nivelRuido}% | Train: ${Math.round(trainRatio * 100)}%`);
 }
 
 function posicionarOverlayPanel3() {
@@ -920,6 +1136,8 @@ function actualizarUIEstado() {
   btn.textContent = etiquetas[estado] || 'Entrenar enjambre';
 
   const bloqueado = enEstado('RUNNING', 'PAUSED');
+
+  // Controles módulo ETA
   ['slider-eta-min', 'slider-eta-max', 'input-epocas'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = bloqueado;
@@ -928,9 +1146,121 @@ function actualizarUIEstado() {
     r.disabled = bloqueado;
   });
 
+  // Controles módulo INIT
+  ['input-epocas-init', 'select-velocidad-init',
+   'cb-uniforme', 'cb-normal', 'cb-xavier', 'cb-he'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = bloqueado;
+  });
+  document.querySelectorAll('input[name="semillas"]').forEach(r => {
+    r.disabled = bloqueado;
+  });
+
   const enMovimiento = enEstado('RUNNING', 'PAUSED');
   ['select-problema', 'slider-ruido', 'slider-train', 'btn-semilla'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = enMovimiento;
   });
+}
+
+// ============================================================================
+// PANEL 4: RED NEURONAL
+// ============================================================================
+
+function dibujarRedPanel4() {
+  const r = panelRect(4);
+
+  const RW  = r.w * 0.40;
+  const RH  = r.h * 0.62;
+  const rx0 = r.x + r.w - RW - 44;
+  const ry0 = r.y + r.h - RH - 22;
+
+  const capas  = [2, 4, 1];
+  const nCapas = capas.length;
+  const RADIO  = 10;
+
+  const COLOR_NODO = [
+    [200, 100, 100],
+    [80,  130, 200],
+    [80,  180, 120]
+  ];
+
+  const xs = capas.map((_, c) =>
+    rx0 + (c / (nCapas - 1)) * RW);
+
+  const margenV    = RADIO * 2.5;
+  const pasoOculta = (RH - 2 * margenV) / 3;
+  const ys = [null, null, null];
+  ys[1] = Array.from({length: 4}, (_, i) => ry0 + margenV + i * pasoOculta);
+  const centroOculta = (ys[1][0] + ys[1][3]) / 2;
+  ys[0] = [centroOculta - RADIO * 2.5, centroOculta + RADIO * 2.5];
+  ys[2] = [centroOculta];
+
+  const idx = modeloSeleccionado !== null ? modeloSeleccionado : null;
+  const m   = idx !== null ? modelos[idx] : null;
+
+  let wMax = 0.001;
+  if (m && m.pesos) {
+    for (const capa of m.pesos)
+      for (const w of capa)
+        if (Math.abs(w) > wMax) wMax = Math.abs(w);
+  }
+
+  for (let c = 0; c < nCapas - 1; c++) {
+    const nIn  = capas[c];
+    const nOut = capas[c + 1];
+    for (let j = 0; j < nOut; j++) {
+      for (let i = 0; i < nIn; i++) {
+        let cr, cg, cb, alfa, grosor;
+        if (m && m.pesos && m.pesos[c]) {
+          const w = m.pesos[c][j * nIn + i];
+          const t = Math.min(Math.abs(w) / wMax, 1);
+          grosor = 0.5 + t * 3.0;
+          alfa   = 50 + t * 200;
+          if (w >= 0) { cr = 60;  cg = 100; cb = 210; }
+          else        { cr = 210; cg = 60;  cb = 60;  }
+        } else {
+          cr = 160; cg = 160; cb = 160;
+          grosor = 0.7; alfa = 70;
+        }
+        stroke(cr, cg, cb, alfa);
+        strokeWeight(grosor);
+        line(xs[c], ys[c][i], xs[c + 1], ys[c + 1][j]);
+      }
+    }
+  }
+
+  for (let c = 0; c < nCapas; c++) {
+    const [nr, ng, nb] = COLOR_NODO[Math.min(c, COLOR_NODO.length - 1)];
+    for (let i = 0; i < capas[c]; i++) {
+      fill(nr, ng, nb, 200); stroke(nr * 0.6, ng * 0.6, nb * 0.6);
+      strokeWeight(1.5);
+      ellipse(xs[c], ys[c][i], RADIO * 2);
+    }
+  }
+
+  noStroke(); fill(60); textSize(11); textAlign(CENTER, BOTTOM);
+  const etiqCapa = ['Entrada', 'Oculta', 'Salida'];
+  for (let c = 0; c < nCapas; c++)
+    text(etiqCapa[c], xs[c], ry0 - 3);
+
+  const subIdx = ['₁', '₂'];
+  textAlign(RIGHT, CENTER); textSize(11); fill(60);
+  for (let i = 0; i < capas[0]; i++)
+    text('x' + subIdx[i], xs[0] - RADIO - 3, ys[0][i]);
+
+  const xSalida = xs[nCapas - 1];
+  const ySalida = ys[nCapas - 1][0];
+  noStroke(); fill(60); textSize(12); textStyle(BOLD);
+  textAlign(LEFT, CENTER);
+  text('y', xSalida + RADIO + 6, ySalida);
+  textStyle(NORMAL);
+  textStyle(NORMAL);
+
+  if (m) {
+    noStroke(); textSize(9); textAlign(LEFT, BOTTOM);
+    fill(60, 100, 210);  text('+ positivo', rx0, r.y + r.h - 2);
+    fill(210, 60, 60);   text('− negativo', rx0 + 62, r.y + r.h - 2);
+    fill(130);           text('grosor=|w|', rx0 + 124, r.y + r.h - 2);
+  }
 }

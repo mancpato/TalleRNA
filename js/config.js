@@ -77,6 +77,8 @@ let modelos = [];
 let modeloReferencia = null;
 let modeloSeleccionado = null;
 let modeloHover = null;
+let distribucionSeleccionada = null;
+let _gruposHitAreas = [];
 
 let notificacion = { texto: '', frameInicio: -200, duracion: 120 };
 
@@ -98,3 +100,17 @@ let interfaz = {
 let etaMinVal   = 0.01;
 let etaMaxVal   = 0.30;
 let nModelosEta = 6;
+
+// Variables específicas del módulo INIT
+const DISTRIBUCIONES = ['uniforme', 'normal', 'xavier', 'he'];
+const COLORES_INIT = {
+  uniforme: '#378ADD',
+  normal:   '#1D9E75',
+  xavier:   '#BA7517',
+  he:       '#534AB7'
+};
+const OPACIDADES_INIT = [255, 166, 102];
+
+let distActivas     = ['uniforme', 'normal', 'xavier', 'he'];
+let semillasPorDist = 1;
+let _debounceInit   = null;

@@ -63,7 +63,6 @@ function iniciarEntrenamiento()
   modeloReferencia = mejorRef;
   transicionar('RUNNING');
   actualizarUIEstado();
-  notificar('Entrenamiento iniciado');
 }
 
 function detener() 
@@ -78,7 +77,6 @@ function continuar()
   console.log('[Transición] continuar()');
   transicionar('RUNNING');
   actualizarUIEstado();
-  notificar('Entrenamiento reanudado');
 }
 
 function converger() 
@@ -88,22 +86,23 @@ function converger()
   actualizarUIEstado();
 }
 
-function reiniciar() 
+function reiniciar()
 {
   console.log('[Transición] reiniciar()');
   transicionar('IDLE');
   actualizarUIEstado();
   modeloReferencia = null;
+  distribucionSeleccionada = null;
   initEnjambre();
-  notificar('Enjambre reiniciado');
 }
 
-function resetear() 
+function resetear()
 {
   console.log('[Transición] resetear()');
   transicionar('IDLE');
   actualizarUIEstado();
   modeloReferencia = null;
+  distribucionSeleccionada = null;
   initEnjambre();
 }
 
@@ -135,7 +134,7 @@ function _distMinFrontera(puntos)
 
 function mousePressed(event) 
 {
-  const y = TOOLBAR_HEIGHT;
+  const y = 0;
   const h = TAB_HEIGHT;
   const pestanas = ['eta', 'init', 'activacion', 'dropout', 'topologia'];
   const ancho_pestaña = 140;
@@ -144,6 +143,7 @@ function mousePressed(event)
   for (let i = 0; i < pestanas.length; i++) {
     if (mouseX > x && mouseX < x + ancho_pestaña && mouseY > y && mouseY < y + h) {
       moduloActivo = pestanas[i];
+      actualizarModuloOverlay();
       resetear();
       break;
     }
@@ -152,22 +152,65 @@ function mousePressed(event)
 
   if (modelos && modelos.length > 0) {
     const r3c = panelRect(3);
-    const DIAM_C = 10, SEP_C = 48;
-    const totalW_C = modelos.length * SEP_C - (SEP_C - DIAM_C);
-    const cirX0_C  = r3c.x + (r3c.w - totalW_C) / 2;
-    const cirY_C   = r3c.y + r3c.h - 40;
-    const HIT_R    = 14;
 
-    for (let i = 0; i < modelos.length; i++) {
-      const cx = cirX0_C + i * SEP_C;
-      const d  = Math.hypot(mouseX - cx, mouseY - cirY_C);
-      if (d <= HIT_R) {
-        modeloSeleccionado = (modeloSeleccionado === i) ? null : i;
-        if (modeloSeleccionado !== null) {
-          modeloMapa = modelos[modeloSeleccionado];
-          renderizarMapa(modeloMapa);
+    if (moduloActivo === 'init') {
+      // Click en nombre de distribución → selección grupal
+      for (const zona of (_gruposHitAreas || [])) {
+        if (mouseX >= zona.x && mouseX <= zona.x + zona.w &&
+            mouseY >= zona.y && mouseY <= zona.y + zona.h) {
+          distribucionSeleccionada =
+            distribucionSeleccionada === zona.dist ? null : zona.dist;
+          modeloSeleccionado = null;
+          return;
         }
-        break;
+      }
+
+      const DISTS = ['uniforme', 'normal', 'xavier', 'he'];
+      const gruposAct = DISTS.filter(d =>
+        modelos.some(m => m.etiqueta.startsWith(d)));
+      const S = semillasPorDist;
+      const anchoGrupo = 34 * (S - 1) + 14;
+      const anchoTotal = gruposAct.length * anchoGrupo + (gruposAct.length - 1) * 48;
+      let gx = r3c.x + (r3c.w - anchoTotal) / 2;
+      const cirY_i = r3c.y + r3c.h - 36;
+
+      let clickado = false;
+      for (const dist of gruposAct) {
+        if (clickado) break;
+        const mdist = modelos.filter(m => m.etiqueta.startsWith(dist));
+        for (let s = 0; s < mdist.length; s++) {
+          const cx = gx + s * 34;
+          if (Math.hypot(mouseX - cx, mouseY - cirY_i) <= 14) {
+            distribucionSeleccionada = null;
+            const idx = modelos.indexOf(mdist[s]);
+            modeloSeleccionado = (modeloSeleccionado === idx) ? null : idx;
+            if (modeloSeleccionado !== null) {
+              modeloMapa = modelos[idx];
+              renderizarMapa(modeloMapa);
+            }
+            clickado = true;
+            break;
+          }
+        }
+        gx += anchoGrupo + 48;
+      }
+    } else {
+      const DIAM_C = 10, SEP_C = 48;
+      const totalW_C = modelos.length * SEP_C - (SEP_C - DIAM_C);
+      const cirX0_C  = r3c.x + (r3c.w - totalW_C) / 2;
+      const cirY_C   = r3c.y + r3c.h - 40;
+      const HIT_R    = 14;
+
+      for (let i = 0; i < modelos.length; i++) {
+        const cx = cirX0_C + i * SEP_C;
+        if (Math.hypot(mouseX - cx, mouseY - cirY_C) <= HIT_R) {
+          modeloSeleccionado = (modeloSeleccionado === i) ? null : i;
+          if (modeloSeleccionado !== null) {
+            modeloMapa = modelos[modeloSeleccionado];
+            renderizarMapa(modeloMapa);
+          }
+          break;
+        }
       }
     }
   }
@@ -190,8 +233,10 @@ function mousePressed(event)
       modeloSeleccionado = mejorIdx;
       modeloMapa = modelos[mejorIdx];
       renderizarMapa(modeloMapa);
-    } else 
+    } else {
       modeloSeleccionado = null;
+      distribucionSeleccionada = null;
+    }
   }
 
   {
@@ -339,10 +384,48 @@ function generarEnjambreEta(etaMin, etaMax, N)
   renderizarMapa(modelos[0]);
 }
 
-function initEnjambre() 
+function generarEnjambreInit() {
+  modelos = [];
+  modeloSeleccionado = null;
+  modeloHover        = null;
+  modeloReferencia   = null;
+  J_max_epoca0  = 1.0;
+  modoLogPanel2 = false;
+  modoAccPanel2 = false;
+
+  for (const dist of distActivas) {
+    for (let s = 1; s <= semillasPorDist; s++) {
+      const m = crearModelo([2, 4, 1], 'relu', 0.05, 0, s, dist);
+      const hex  = COLORES_INIT[dist];
+      const alfa = OPACIDADES_INIT[s - 1];
+      m.color    = color(
+        parseInt(hex.slice(1, 3), 16),
+        parseInt(hex.slice(3, 5), 16),
+        parseInt(hex.slice(5, 7), 16),
+        alfa
+      );
+      m.etiqueta = `${dist}·s${s}`;
+      const grid = calcularGridPrediccion(m, 50);
+      m.frontera = calcularFrontera(grid, 50);
+      modelos.push(m);
+    }
+  }
+
+  if (modelos.length > 0) {
+    modeloReferencia = 0;
+    modeloMapa = modelos[0];
+    renderizarMapa(modelos[0]);
+  }
+  console.log('[Enjambre Init] modelos:', modelos.length,
+    modelos.map(m => m.etiqueta));
+}
+
+function initEnjambre()
 {
-  if (moduloActivo === 'eta') 
+  if (moduloActivo === 'eta')
     generarEnjambreEta(etaMinVal, etaMaxVal, nModelosEta);
+  else if (moduloActivo === 'init')
+    generarEnjambreInit();
 }
 
 function pasosPorFrame() 

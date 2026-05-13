@@ -14,8 +14,10 @@ rendimiento de cada modelo.
 
 ## Uso
 
-Abrir `TalleRNA.html` directamente en el navegador. No requiere instalación
-ni servidor. Solo depende de p5.js (cargado vía CDN).
+Abrir `index.html` directamente en el navegador,
+o servir con `python3 -m http.server 8000` y abrir
+http://localhost:8000 para evitar restricciones de file://.
+No requiere instalación. Solo depende de p5.js (cargado vía CDN).
 
 ## Interfaz
 
@@ -28,15 +30,15 @@ ni servidor. Solo depende de p5.js (cargado vía CDN).
 
 ## Módulos (pestañas)
 
-- **Tasa de aprendizaje**: compara N modelos con η distribuido en [η_min, η_max]
-- **Inicialización**: *(próximamente)*
-- **Activación**: *(próximamente)*
-- **Dropout**: *(próximamente)*
-- **Topología**: *(próximamente)*
+- **Tasa de aprendizaje**: ✅ operativo
+- **Inicialización**: ✅ operativo
+- **Activación**: próximamente
+- **Dropout**: próximamente
+- **Topología**: próximamente
 
 ## Problemas disponibles
 
-Espiral · Círculos · XOR · Media luna · Seno (regresión)
+Espiral · Círculos · XOR · Media luna · Seno (regresión) — visualización 1D pendiente
 
 ## Arquitectura base
 

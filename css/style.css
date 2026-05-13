@@ -21,7 +21,7 @@ html, body {
 /* Overlay DOM sobre barra global */
 #barra-overlay {
   position: absolute;
-  top: 0;
+  top: 32px; /* TAB_HEIGHT */
   left: 0;
   height: 40px; 
   display: flex;
