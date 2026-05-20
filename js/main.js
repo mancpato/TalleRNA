@@ -96,6 +96,15 @@ function draw() {
       }
     }
 
+    if (_epochTarget !== null) {
+      const epActual = modelos.length > 0
+        ? Math.max(...modelos.map(m => m.historial.length)) : 0;
+      if (epActual >= _epochTarget) {
+        _epochTarget = null;
+        detener();
+      }
+    }
+
     const activosIdx = modelos
       .map((m, i) => ({ m, i }))
       .filter(({ m }) => m.estado === 'activo');
