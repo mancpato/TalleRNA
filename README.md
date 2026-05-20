@@ -32,13 +32,13 @@ No requiere instalación. Solo depende de p5.js (cargado vía CDN).
 
 - **Tasa de aprendizaje**: ✅ operativo
 - **Inicialización**: ✅ operativo
-- **Activación**: próximamente
-- **Dropout**: próximamente
-- **Topología**: próximamente
+- **Activación**: ✅ operativo
+- **Dropout**: 🚧 en desarrollo
+- **Topología**: 🚧 en desarrollo
 
 ## Problemas disponibles
 
-Espiral · Círculos · XOR · Media luna · Seno (regresión) — visualización 1D pendiente
+Espiral · Círculos · XOR · Media luna · Seno (regresión, pendiente)
 
 ## Arquitectura base
 
@@ -54,11 +54,22 @@ para garantizar reproducibilidad entre sesiones.
 ├── css/
 │   └── style.css
 └── js/
-    ├── config.js      (Variables globales y paletas)
-    ├── motor_ml.js    (Matemáticas, red neuronal y datos)
-    ├── ui.js          (Renderizado visual de p5 y constructores del DOM)
-    ├── interaccion.js (Máquina de estados y eventos de mouse)
-    └── main.js        (Bucle principal: setup, draw)
+    ├── config.js        (Variables globales y paletas)
+    ├── motor_ml.js      (Matemáticas, red neuronal y datos)
+    ├── main.js          (Bucle principal: setup, draw)
+    ├── comun/
+    │   ├── estado.js    (Máquina de estados y control del enjambre)
+    │   ├── layout.js    (Geometría, barra global, pestañas, notificaciones)
+    │   ├── panel1.js    (Espacio de salida: mapa, fronteras, datos)
+    │   ├── panel2.js    (Historial de pérdida)
+    │   ├── panel4.js    (Estadísticas y visualización de red)
+    │   └── eventos.js   (Interacción: mouse, pestañas)
+    └── modulos/
+        ├── eta.js       (Módulo tasa de aprendizaje)
+        ├── init.js      (Módulo inicialización de pesos)
+        ├── activacion.js(Módulo función de activación)
+        ├── dropout.js   (Módulo dropout)
+        └── topologia.js (Módulo topología)
 ```
 
 ## Autor
