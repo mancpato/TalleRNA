@@ -35,7 +35,9 @@ function inicializarPaletas() {
     sigmoid: color('#D85A30'),
     tanh: color('#1D9E75'),
     lineal: color('#888780'),
-    leaky_relu: color('#534AB7')
+    leaky_relu: color('#534AB7'),
+    elu:        color('#E67E22'),
+    escalon:    color('#7F8C8D')
   };
 
   PALETAS.dropout = {
@@ -70,7 +72,7 @@ let moduloActivo = 'eta';
 let estado = 'IDLE';
 
 let velocidad = 'normal';
-let maximoEpocas = 200;
+let maximoEpocas = 500;
 let mostrarCurvasTest = false;
 
 let modelos = [];
@@ -113,4 +115,4 @@ const OPACIDADES_INIT = [255, 166, 102];
 
 let distActivas     = ['uniforme', 'normal', 'xavier', 'he'];
 let semillasPorDist = 1;
-let _debounceInit   = null;
+let _debounceInit   = null;let _epochTarget = null;
