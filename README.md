@@ -1,14 +1,15 @@
 # TalleRNA
 
-Visualizador interactivo de enjambres de redes neuronales para uso educativo.
-Desarrollado en el Departamento Académico de Sistemas Computacionales (DASC),
-Universidad Autónoma de Baja California Sur (UABCS).
+Visualizador interactivo de múltiples de redes neuronales entrenando 
+simultáneamente para uso didáctico. Desarrollado en el Departamento 
+Académico de Sistemas Computacionales (DASC), Universidad Autónoma de 
+Baja California Sur (UABCS).
 
 ## Descripción
 
 TalleRNA permite explorar cómo los hiperparámetros afectan el entrenamiento
 de múltiples redes neuronales simultáneamente. El usuario configura un rango
-de valores para un hiperparámetro, lanza un enjambre de modelos y observa
+de valores para cada hiperparámetro, lanza un enjambre de modelos y observa
 en tiempo real cómo evolucionan las fronteras de decisión, la pérdida y el
 rendimiento de cada modelo.
 
