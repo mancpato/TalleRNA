@@ -40,6 +40,11 @@ function inicializarPaletas() {
     escalon:    color('#7F8C8D')
   };
 
+  PALETAS.momentum = {
+    azulClaro:     color('#57AFDB'),  // hsl(200,65%,60%)
+    naranjaOscuro: color('#C65C10')   // hsl(25,85%,42%)
+  };
+
   PALETAS.dropout = {
     naranjaOscuro: color('#B85A1A'),
     azul: color('#2277BB')
@@ -116,4 +121,4 @@ const OPACIDADES_INIT = [255, 166, 102];
 
 let distActivas     = ['uniforme', 'normal', 'xavier', 'he'];
 let semillasPorDist = 1;
-let _debounceInit   = null;let _epochTarget = null;
+let _debounceInit   = null;

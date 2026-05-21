@@ -1,3 +1,16 @@
+/**
+ * TalleRNA: Taller de Redes Neuronales Artificiales
+ * @file: activacion.js
+ * @description: Módulo para la visualización y control de la función de 
+ *      activación en el panel 3. 
+ * @author: Miguel Ángel Norzagaray Cosío
+ * @since: abril de 2026
+ * 
+ * En este archivo se generan modelos que emplean diferentes funciones de
+ * activación, de un conjunto predefinido. El usuario selecciona cuáles 
+ * comparar.
+ */
+
 // ══════════════════════════════════════════════════════════════════════════════
 // MÓDULO: FUNCIÓN DE ACTIVACIÓN
 // Variable : función de activación en capas ocultas (hasta 5 modelos)
@@ -18,7 +31,21 @@ const NOMBRES_ACT = {
   escalon:    'Escalón'
 };
 
-let activacionesActivas  = ['sigmoid', 'relu', 'lineal', 'tanh', 'leaky_relu', 'escalon', 'elu'];
+// Fuente única de orden canónico: controla tanto los checkboxes como los círculos.
+// Orden: lectura de columnas de arriba a abajo →
+//   Col1: Sigmoid, Tanh  |  Col2: ReLU, Leaky ReLU, ELU  |  Col3: Lineal, Escalón
+// col: columna explícita en el grid (1=Sigmoid/Tanh, 2=ReLU/Leaky/ELU, 3=Lineal/Escalón)
+const CB_IDS = [
+  ['cb-act-sigmoid',    'sigmoid',    'Sigmoid',    1],
+  ['cb-act-tanh',       'tanh',       'Tanh',       1],
+  ['cb-act-relu',       'relu',       'ReLU',       2],
+  ['cb-act-leaky_relu', 'leaky_relu', 'Leaky ReLU', 2],
+  ['cb-act-elu',        'elu',        'ELU',        2],
+  ['cb-act-lineal',     'lineal',     'Lineal',     3],
+  ['cb-act-escalon',    'escalon',    'Escalón',    3],
+];
+
+let activacionesActivas  = CB_IDS.map(([, act]) => act);
 let _debounceActivacion  = null;
 
 // ── 2. GENERACIÓN DEL ENJAMBRE ────────────────────────────────────────────────
@@ -77,22 +104,7 @@ function crearSeccionOverlayActivacion() {
     <div style="font-size:11px;color:#888;margin-bottom:6px">
       Selecciona las funciones a comparar:
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,auto);grid-auto-flow:column;gap:4px 8px;margin:6px 0;font-size:12px">
-      <label><input type="checkbox" id="cb-act-sigmoid"    checked>&nbsp;Sigmoid</label>
-      <label><input type="checkbox" id="cb-act-tanh"       checked>&nbsp;Tanh</label>
-      <div></div>
-      <label><input type="checkbox" id="cb-act-relu"       checked>&nbsp;ReLU</label>
-      <label><input type="checkbox" id="cb-act-leaky_relu" checked>&nbsp;Leaky ReLU</label>
-      <label><input type="checkbox" id="cb-act-elu"        checked>&nbsp;ELU</label>
-      <label><input type="checkbox" id="cb-act-lineal"     checked>&nbsp;Lineal</label>
-      <div>
-        <label><input type="checkbox" id="cb-act-escalon" checked>&nbsp;Escalón</label>
-        <div style="font-size:10px;color:#aaa;margin-left:18px">∇=0</div>
-      </div>
-    </div>
-    <div style="font-size:11px;color:#888;margin-top:6px">
-      Total: <span id="span-total-act">7</span> modelos
-    </div>
+    <div id="grid-checkboxes-act" style="display:flex;gap:8px;margin:6px 0;font-size:12px;align-items:flex-start"></div>
   `;
   overlay.appendChild(div);
 
@@ -106,16 +118,25 @@ function crearSeccionOverlayActivacion() {
   });
   document.getElementById('btn-paso-act').addEventListener('click', avanzar100);
 
-  // Checkboxes de activación
-  const CB_IDS = [
-    ['cb-act-sigmoid',    'sigmoid'],
-    ['cb-act-relu',       'relu'],
-    ['cb-act-lineal',     'lineal'],
-    ['cb-act-tanh',       'tanh'],
-    ['cb-act-leaky_relu', 'leaky_relu'],
-    ['cb-act-escalon',    'escalon'],
-    ['cb-act-elu',        'elu']
-  ];
+  // Generar checkboxes desde CB_IDS (fuente única de orden)
+  // Tres divs de columna dentro de un flex container
+  const grid = document.getElementById('grid-checkboxes-act');
+  const colDivs = [1, 2, 3].map(n => {
+    const d = document.createElement('div');
+    d.style.cssText = 'display:flex;flex-direction:column;gap:4px;flex:1;align-self:start;margin-top:0;padding-top:0';
+    grid.appendChild(d);
+    console.log(`[activacion] colDiv${n} cssText:`, d.style.cssText);
+    return d;
+  });
+
+  CB_IDS.forEach(([id, , label, col]) => {
+    const wrapper = document.createElement('label');
+    wrapper.style.display = 'block';
+    const isEscalon = id === 'cb-act-escalon';
+    wrapper.innerHTML = `<input type="checkbox" id="${id}" checked>&nbsp;${label}`
+      + (isEscalon ? '<div style="font-size:10px;color:#aaa;margin-left:18px">∇=0</div>' : '');
+    colDivs[col - 1].appendChild(wrapper);
+  });
 
   CB_IDS.forEach(([id]) => {
     document.getElementById(id).addEventListener('change', () => {
@@ -129,8 +150,6 @@ function crearSeccionOverlayActivacion() {
       }
 
       activacionesActivas = activas;
-      const span = document.getElementById('span-total-act');
-      if (span) span.textContent = activas.length;
 
       clearTimeout(_debounceActivacion);
       _debounceActivacion = setTimeout(() => resetear(), 300);

@@ -29,23 +29,31 @@
 // GENERACIÓN DE DATOS Y NORMALIZACIÓN 
 // ============================================================================
 
-// No uso random nativo para poder controlar la semilla y reproducibilidad
-// Este se encuentra en https://en.wikipedia.org/wiki/Linear_congruential_generator
+/* 
+ Generador Congruencial Lineal
+ No uso random nativo para poder controlar la semilla y reproducibilidad
+ Este se encuentra en https://en.wikipedia.org/wiki/Linear_congruential_generator
+ */
 class LCG { 
-  constructor(seed) {
+  constructor(seed) 
+  {
     this.seed = seed >>> 0; 
     this.a = 1103515245;
     this.c = 12345;
     this.m = 2147483648; 
   }
 
-  next() {
+  next() 
+  {
     this.seed = (this.a * this.seed + this.c) % this.m;
     return this.seed / this.m; 
   }
 
-  // Box-Muller para los pesos y ruido gaussiano
-  nextGaussian() {
+  /* Si no se usa Box-Muller, la otra opción sería usar la función de 
+   distribución inversa de la normal, pero la complejidad temporal es mayor.
+  */
+  nextGaussian() // Box-Muller para los pesos y ruido gaussiano
+  {
     const u1 = this.next();
     const u2 = this.next();
     const z = Math.sqrt(-2 * Math.log(u1 + 1e-10)) * Math.cos(2 * Math.PI * u2);
@@ -53,7 +61,23 @@ class LCG {
   }
 }
 
-function generarDatos(problema, nivelRuido, trainRatio, semilla) {
+/* Los conjuntos de datos pretenden ilustrar diversidad de problemas de 
+  clasificación, con formas no lineales y ruido.
+- Espiral: Dos clases en forma de espiral entrelazada, el más difícil
+- Círculos concéntricos: Una clase dentro de la otra, también no lineal.
+- XOR: Cuatro cuadrantes con dos clases alternadas, clásico problema no lineal.
+- Medialuna: Dos clases en forma de media luna enfrentada, otro caso no lineal.
+- Seno: Regresión con ruido, para ilustrar un problema de predicción continua.
+
+Las dos medias lunas no termina de convencerme, pero es un clásico. Otro que
+podría agregarse es una sinusoide con ruido, para ilustrar un problema de 
+regresión.
+
+El nivel de ruido se ajusta para que sea visible pero no excesivo, permitiendo 
+observar el efecto del mismo en el entrenamiento.
+*/
+function generarDatos(problema, nivelRuido, trainRatio, semilla) 
+{
   const rng = new LCG(semilla);
   const sigma = nivelRuido * 0.25; // Ajuste de ruido para que sea visible pero no excesivo
 
@@ -141,7 +165,8 @@ function generarDatos(problema, nivelRuido, trainRatio, semilla) {
   return { datosTrain, datosTest };
 }
 
-function normalizarDatos(datosTrain, datosTest) {
+function normalizarDatos(datosTrain, datosTest) 
+{
   const nInput = datosTrain.length > 0 ? datosTrain[0].x.length : 1;
 
   const todosLosDatos = [...datosTrain, ...datosTest];
@@ -151,8 +176,10 @@ function normalizarDatos(datosTrain, datosTest) {
 
   for (const d of todosLosDatos) {
     for (let k = 0; k < nInput; k++) {
-      if (d.x[k] < mins[k]) mins[k] = d.x[k];
-      if (d.x[k] > maxs[k]) maxs[k] = d.x[k];
+      if (d.x[k] < mins[k]) 
+        mins[k] = d.x[k];
+      if (d.x[k] > maxs[k]) 
+        maxs[k] = d.x[k];
     }
   }
 
@@ -184,51 +211,51 @@ function aplicarActivacion(z, tipo) {
   const result = new Float32Array(z.length);
   for (let i = 0; i < z.length; i++) {
     const val = z[i];
-    if (tipo === 'relu') {
+    if (tipo === 'relu') 
       result[i] = Math.max(0, val);
-    } else if (tipo === 'sigmoid') {
+    else if (tipo === 'sigmoid') {
       const clamped = Math.min(100, Math.max(-100, val));
       result[i] = 1 / (1 + Math.exp(-clamped));
-    } else if (tipo === 'tanh') {
+    } else if (tipo === 'tanh') 
       result[i] = Math.tanh(val);
-    } else if (tipo === 'lineal') {
+    else if (tipo === 'lineal') 
       result[i] = val;
-    } else if (tipo === 'leaky_relu') {
+    else if (tipo === 'leaky_relu') 
       result[i] = val > 0 ? val : 0.01 * val;
-    } else {
+    else 
       result[i] = val;
-    }
   }
   return result;
 }
 
-function derivadaActivacion(z, tipo) {
+function derivadaActivacion(z, tipo)
+{
   const result = new Float32Array(z.length);
   for (let i = 0; i < z.length; i++) {
     const val = z[i];
-    if (tipo === 'relu') {
+    if (tipo === 'relu') 
       result[i] = val > 0 ? 1 : 0;
-    } else if (tipo === 'sigmoid') {
+    else if (tipo === 'sigmoid') {
       const clamped = Math.min(100, Math.max(-100, val));
       const sig = 1 / (1 + Math.exp(-clamped));
       result[i] = sig * (1 - sig);
     } else if (tipo === 'tanh') {
       const t = Math.tanh(val);
       result[i] = 1 - t * t;
-    } else if (tipo === 'lineal') {
+    } else if (tipo === 'lineal')
       result[i] = 1;
-    } else if (tipo === 'leaky_relu') {
+    else if (tipo === 'leaky_relu')
       result[i] = val > 0 ? 1 : 0.01;
-    } else {
+    else 
       result[i] = 1;
-    }
   }
   return result;
 }
 
-function crearModelo(capas, activacion, eta, dropout, semillaPesos, distribucion) {
+function crearModelo(capas, activacion, eta, dropout, semillaPesos, distribucion, beta = 0.9) 
+{
   const modelo = {
-    capas, activacion, eta, dropout, semillaPesos, distribucion,
+    capas, activacion, eta, dropout, semillaPesos, distribucion, beta,
     pesos: [], sesgos: [], velPesos: [], velSesgos: [],
     historial: [], estado: 'activo', epocaFinal: null,
     contadorConv: 0, stepCount: 0
@@ -447,7 +474,7 @@ function backprop(modelo, activaciones, preActivaciones, yReal, tipo) {
 }
 
 function actualizarPesos(modelo, gradientes) {
-  const beta = 0.9;
+  const beta = modelo.beta;
   const eta = modelo.eta;
   
   for (let l = 0; l < modelo.pesos.length; l++) {
@@ -483,22 +510,28 @@ function entrenarEpoca(modelo, datosTrain) {
 
   const yPred = fwd.activaciones[fwd.activaciones.length - 1].map(a => a[0]);
   const J_train = calcularLoss(yPred, y_train, tipoLoss);
-  const gradientes = backprop(modelo, fwd.activaciones, fwd.preActivaciones, y_train, tipoLoss);
+  const gradientes = backprop(modelo, fwd.activaciones, fwd.preActivaciones, 
+                          y_train, tipoLoss);
 
   let sumaCuad = 0; let countGrad = 0;
-  for (const dWl of gradientes.dW) {
-    for (const g of dWl) { sumaCuad += g * g; countGrad++; }
+  for (const dWl of gradientes.dW) 
+    for (const g of dWl) { 
+      sumaCuad += g * g; 
+      countGrad++; 
+
   }
-  for (const dbl of gradientes.db) {
-    for (const g of dbl) { sumaCuad += g * g; countGrad++; }
-  }
+  for (const dbl of gradientes.db) 
+    for (const g of dbl) { 
+      sumaCuad += g * g; 
+      countGrad++; 
+    }
+
   modelo.gradNormaMedia = countGrad > 0 ? Math.sqrt(sumaCuad / countGrad) : 0;
 
   actualizarPesos(modelo, gradientes);
 
   const { J_test, accuracy_test } = evaluarTest(modelo, datosTest);
-  modelo.historial.push({
-    epoca: modelo.historial.length,
+  modelo.historial.push({ epoca: modelo.historial.length,
     J_train, J_test, accuracy_test
   });
 
@@ -516,9 +549,8 @@ function evaluarTest(modelo, datosTest) {
 
   const J_test = calcularLoss(yPred, y_test, tipoLoss);
   let accuracy_test = null;
-  if (esTipoClasif) {
+  if (esTipoClasif) 
     accuracy_test = calcularAccuracy(yPred, y_test);
-  }
 
   return { J_test, accuracy_test };
 }
@@ -549,22 +581,22 @@ function verificarConvergencia(modelo) {
 }
 
 function verificarDivergencia(modelo, J_anterior) {
-  if (modelo.historial.length === 0) return { diverge: false, tipo: null };
+  if (modelo.historial.length === 0)
+    return { diverge: false, tipo: null };
   const J_actual = modelo.historial[modelo.historial.length - 1].J_train;
 
-  if (J_anterior && J_actual > J_anterior * 10 && J_actual > 1e-6) {
+  if (J_anterior && J_actual > J_anterior * 10 && J_actual > 1e-6) 
     return { diverge: true, tipo: 'explosion' };
-  }
 
   for (const W of modelo.pesos) {
-    for (const w of W) {
-      if (!isFinite(w) || Math.abs(w) > 1e6) return { diverge: true, tipo: 'colapso' };
-    }
+    for (const w of W) 
+      if (!isFinite(w) || Math.abs(w) > 1e6) 
+        return { diverge: true, tipo: 'colapso' };
   }
   for (const b of modelo.sesgos) {
-    for (const bi of b) {
-      if (!isFinite(bi) || Math.abs(bi) > 1e6) return { diverge: true, tipo: 'colapso' };
-    }
+    for (const bi of b) 
+      if (!isFinite(bi) || Math.abs(bi) > 1e6) 
+        return { diverge: true, tipo: 'colapso' };
   }
   return { diverge: false, tipo: null };
 }

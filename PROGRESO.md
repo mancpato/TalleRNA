@@ -1,6 +1,6 @@
 # PROGRESO: TalleRNA
 
-**Última actualización**: 2026-05-12
+**Última actualización**: 2026-05-21
 **Etapa actual**: Módulo de Activación
 **Estado general**: Etapas 0–3 completas. Módulos Eta e Init operativos.
 Panel 2, Panel 4 (resumen + red neuronal) y barra global terminados.
@@ -60,6 +60,16 @@ Círculos con color propio + anillo de estado (verde/rojo/gris).
   coloreados por capa (rojo=entrada, azul=oculta, verde=salida),
   conexiones azul/rojo por signo del peso, grosor proporcional a |w|,
   etiquetas x₁, x₂, y. Se activa con modelo seleccionado.
+
+### Panel 3 — Módulo Momentum ✅
+- `generarEnjambreMomentum()`: 6 modelos β ∈ {0.0, 0.2, 0.4, 0.6, 0.8, 0.9}.
+- Colores gradiente azul_claro → naranja_oscuro por β creciente.
+- Overlay DOM: texto informativo, sin controles interactivos propios.
+- Controles comunes (épocas máx., velocidad, +100) integrados.
+- Círculos con accuracy encima y etiqueta β debajo.
+- Hover y selección cruzada con Panel 1 y Panel 2 operativos.
+- Fenómeno visible: β=0.0 converge notablemente más lento que β=0.9;
+  accuracies finales similares — momentum afecta velocidad, no el mínimo.
 
 ### Barra global DOM interactiva ✅
 Selector de problema (XOR por defecto), sliders ruido/train,
@@ -126,20 +136,19 @@ botón semilla (⚄). Problema seno deshabilitado.
 | Componente | Prioridad | Notas |
 |------------|-----------|-------|
 | **Módulo Activación** | 🔴 Inmediato | Checkboxes ReLU/Sigmoid/Tanh/Lineal/LeakyReLU |
-| Módulo Dropout | 🟡 | 6 modelos fijos p=0.0–0.5 |
-| Módulo Topología | 🟡 | Checkboxes T0–T7 |
+| Módulo Momentum | ✅ | Operativo |
+| **Módulo Topología** | 🔴 Inmediato | Checkboxes T0–T7 |
+| Módulo Dropout | 🟡 experimental | Movido a módulo experimental (ver TalleRNAspec_ModuloExperimental.md). Requiere red 2→4→4→1. |
 | Panel 4 completo | 🟠 | Tabla por modelo (η, J_train, J_test, acc, épocas) |
 | Regresión seno | 🟠 | Visualización 1D en Panel 1. Selector deshabilitado. |
 
 ---
 
-## PRÓXIMA SESIÓN: Módulo de Activación
+## PRÓXIMA SESIÓN: Módulo de Topología
 
-Implementar el módulo de activación según §6.3 de la especificación:
-checkboxes para ReLU / Sigmoid / Tanh / Lineal / LeakyReLU,
-generación de un modelo por función activa seleccionada (η=0.05 fijo,
-semilla fija), colores por función (ver PALETAS.activacion en config.js).
-
-Dependencias listas: `crearModelo()` acepta `activacion` como parámetro;
-`aplicarActivacion()` y `derivadaActivacion()` implementan las 5 funciones.
-Solo falta el UI del Panel 3 (caso `'activacion'`) y `generarEnjambreActivacion()`.
+Implementar el módulo de topología según §6.5 de la especificación:
+checkboxes T0–T7 (hasta 8 arquitecturas simultáneas), η=0.05 fijo,
+Xavier semilla=1, ReLU fija (mostrada explícitamente), sin dropout.
+Colores por complejidad creciente (ver PALETAS.topologia en config.js).
+Dependencias listas: crearModelo() acepta capas como array variable.
+Solo falta generarEnjambreTopologia() y el overlay DOM del Panel 3.

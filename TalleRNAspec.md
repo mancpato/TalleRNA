@@ -41,7 +41,7 @@ Barra horizontal en la parte superior. Persiste independientemente del módulo a
 Cinco pestañas debajo de la barra global. Solo un módulo activo a la vez.
 
 ```
-[ Tasa de aprendizaje ]  [ Inicialización ]  [ Activación ]  [ Dropout ]  [ Topología ]
+[ Tasa de aprendizaje ]  [ Inicialización ]  [ Activación ]  [ Momentum ]  [ Topología ]
 ```
 
 Al cambiar de pestaña con animación activa: detener animación, mantener datos y semilla, reiniciar enjambre con la configuración del nuevo módulo, transicionar a IDLE.
@@ -250,15 +250,15 @@ La activación de la capa de salida permanece fija (sigmoid para clasificación,
 
 Fenómenos observables: por qué Lineal falla en problemas no lineales (su frontera siempre es un hiperplano), saturación de Sigmoid/Tanh, ventaja de velocidad de ReLU.
 
-### 6.4 Módulo — Dropout
+### 6.4 Módulo — Momentum
 
 | Parámetro | Valor |
 |---|---|
-| Variable | Tasa de dropout p |
-| Valores | 0.0, 0.1, 0.2, 0.3, 0.4, 0.5 (fijos, 6 modelos) |
+| Variable | β (coeficiente de momentum) |
+| Valores | 0.0 · 0.3 · 0.6 · 0.9 (4 modelos fijos) |
 | Fijo | η = 0.05, Xavier (semilla=1), ReLU, red base 2→4→1 |
 
-Fenómenos observables: regularización, brecha train/test en función de p, costo de dropout excesivo.
+Fenómenos observables: SGD puro (β=0) vs SGD con momentum creciente. Convergencia más lenta y ruidosa para β=0; aceleración y suavizado progresivos al aumentar β; posible overshooting visible en Panel 2 cuando η=0.05 y β=0.9 en problemas no lineales.
 
 ### 6.5 Módulo — Topología
 
@@ -400,8 +400,8 @@ Checkboxes [☑ Uniforme] [☑ Normal] [☑ Xavier] [☑ He]. Selector "Semillas
 **Activación**:
 Checkboxes [☑ ReLU] [☑ Sigmoid] [☑ Tanh] [☑ Lineal] [☑ Leaky ReLU]. Display: "N modelos total".
 
-**Dropout**:
-Display informativo del rango 0.0–0.5, paso 0.1. Nota: "6 modelos fijos".
+**Momentum**:
+Display informativo del rango β ∈ {0.0, 0.3, 0.6, 0.9}. Nota: "4 modelos fijos". Sin controles adicionales.
 
 **Topología**:
 Checkboxes [☑ T0] [☑ T1] ... [☑ T7] con etiqueta de notación a la derecha. Etiqueta fija visible: "Activación: ReLU (fija en este módulo)". Display: "N modelos seleccionados (máx. 8)".
@@ -521,7 +521,18 @@ Semilla 1: opacidad 100%. Semilla 2: 65%. Semilla 3: 40%.
 | Lineal | gris `#888780` |
 | Leaky ReLU | violeta `#534AB7` |
 
-### 11.4 Dropout — gradiente por tasa
+### 11.4 Momentum — gradiente por coeficiente β
+
+```
+t = β / 0.9
+color = lerpColor(azul_claro, naranja_oscuro, t)
+azul_claro     = hsl(200, 65%, 60%)
+naranja_oscuro = hsl(25, 85%, 42%)
+```
+
+Etiqueta de cada modelo: "β=0.0", "β=0.3", "β=0.6", "β=0.9".
+
+### 11.5 Dropout — gradiente por tasa (módulo experimental)
 
 ```
 t = p / 0.5
@@ -530,7 +541,7 @@ naranja_oscuro = hsl(20, 80%, 40%)
 azul           = hsl(210, 70%, 45%)
 ```
 
-### 11.5 Topología — color por complejidad creciente
+### 11.6 Topología — color por complejidad creciente
 
 | ID | Color |
 |---|---|
@@ -719,7 +730,7 @@ datosTrain:        Array<{x: number[], y: number}>
 datosTest:         Array<{x: number[], y: number}>
 
 // Módulo activo
-moduloActivo:      'eta'|'init'|'activacion'|'dropout'|'topologia'
+moduloActivo:      'eta'|'init'|'activacion'|'momentum'|'topologia'
 
 // Estado
 estado:            'IDLE'|'RUNNING'|'PAUSED'|'CONVERGED'

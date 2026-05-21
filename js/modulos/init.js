@@ -1,3 +1,19 @@
+/**
+ * TalleRNA: Taller de Redes Neuronales Artificiales
+ * @file: ini.js
+ * @description: Módulo para experimentar con diversas formas de inicialización 
+ *        de pesos en el panel 3.
+ * @author: Miguel Ángel Norzagaray Cosío
+ * @since: abril de 2026
+ * 
+ * Se generan modelos con diferentes métodos de inicialización de pesos,
+ * incluyendo Uniforme, Normal, Xavier y He. El usuario puede seleccionar cuáles
+ * comparar y cuántas semillas usar para cada una. 
+ * 
+ * Las semillas se generan a partir de la semilla global de datos, aunque esto 
+ * no debiera ser necesario.
+ */
+
 // ══════════════════════════════════════════════════════════════════════════════
 // MÓDULO: INICIALIZACIÓN DE PESOS
 // Variable : distribución × semilla (hasta 4 × 3 = 12 modelos)

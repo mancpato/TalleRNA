@@ -70,6 +70,8 @@ function dibujarBarraGlobal() {
     textoArq = '2→4→1 · ReLU · η=0.05 · SGD+mom';
   } else if (moduloActivo === 'activacion') {
     textoArq = '2→4→1 · η=0.05 · Xavier · SGD+mom';
+  } else if (moduloActivo === 'momentum') {
+    textoArq = '2→4→1 · ReLU · η=0.05 · Xavier · β∈{0,0.3,0.6,0.9}';
   } else if (moduloActivo === 'dropout') {
     textoArq = '2→4→1 · ReLU · η=0.05 · Xavier · SGD+mom';
   } else if (moduloActivo === 'topologia') {
@@ -89,7 +91,7 @@ function dibujarPestanas() {
     { label: 'Tasa de aprendizaje', id: 'eta'       },
     { label: 'Inicialización',       id: 'init'      },
     { label: 'Activación',           id: 'activacion'},
-    { label: 'Dropout',              id: 'dropout'   },
+    { label: 'Momentum',             id: 'momentum'  },
     { label: 'Topología',            id: 'topologia' }
   ];
 

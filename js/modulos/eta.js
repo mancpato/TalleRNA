@@ -1,3 +1,26 @@
+/**
+ * TalleRNA: Taller de Redes Neuronales Artificiales
+ * @file: eta.js
+ * @description: Módulo para la visualización y control de la tasa 
+ *        de aprendizaje (η) en el panel 3. 
+ * @author: Miguel Ángel Norzagaray Cosío
+ * @since: abril de 2026
+ * 
+ * Este archivo define las funciones necesarias para generar múltiples modelos
+ * con diferentes tasas de aprendizaje, controlar su entrenamiento y visualizar
+ * su desempeño en el panel 3. El usuario decide la tasa mínima y máxima, así 
+ * como la cantidad de modelos que se van a comparar. 
+ * 
+ * Cada modelo se representa con un disco cuyo color se usa también en los 
+ * paneles 1 y 2. Cuando se alcanzan las iteraciones máximas o el criterio de 
+ * convergencia. Cuando se alcanzan las iteraciones máximas o se cumple el
+ * criterio de convergencia, el disco se rodea con un círculo verde 
+ * o rojo dependiendo de su convergencia. 
+ * 
+ * El porcentaje sobre el disco es la medida de su desempeño, es decir, el 
+ * porcentaje de aciertos sobre el conjunto de prueba.
+ */
+
 // ══════════════════════════════════════════════════════════════════════════════
 // MÓDULO: TASA DE APRENDIZAJE (η)
 // Variable : η ∈ [etaMinVal, etaMaxVal], N modelos equidistantes

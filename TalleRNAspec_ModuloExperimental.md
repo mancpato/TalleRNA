@@ -652,3 +652,27 @@ Lo siguiente está documentado pero no se implementa:
 
 Estas extensiones corresponden al **Módulo Experimental Avanzado**, que es
 una aplicación independiente con servidor y GPU opcional.
+
+---
+
+## Módulo experimental — Dropout
+
+Variable: tasa de dropout p ∈ {0.0, 0.1, 0.2, 0.3, 0.4, 0.5} (6 modelos fijos).
+
+Red recomendada: 2→4→4→1 (en lugar de la red base 2→4→1).
+Justificación: con 2→4→1 (17 parámetros) y 160 puntos de entrenamiento la razón
+datos/parámetros es ~10:1 y el sobreajuste raramente aparece, haciendo invisible el
+efecto regularizador del dropout. Con 2→4→4→1 (37 parámetros) y problema Espiral con
+ruido ≥ 15 la brecha J_train/J_test sin dropout es observable, y dropout la reduce
+progresivamente hasta que p=0.5 degrada el aprendizaje — el fenómeno pedagógico completo.
+
+Implementación: inverted dropout ya está en motor_ml.js.
+Solo falta el UI del Panel 3 y generarEnjambreDropout().
+
+Esquema de color (del §11.5 de la spec principal):
+```
+t = p / 0.5
+color = lerpColor(naranja_oscuro, azul, t)
+naranja_oscuro = hsl(20, 80%, 40%)
+azul           = hsl(210, 70%, 45%)
+```
