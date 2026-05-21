@@ -1,16 +1,29 @@
-// ══════════════════════════════════════════════════════════════════════════════
+/**
+ * TalleRNA: Taller de Redes Neuronales Artificiales
+ * @file: momentum.js
+ * @description: Permite evaluar el efecto del momentum. 
+ * @author: Miguel Ángel Norzagaray Cosío
+ * @since: abril de 2026
+ * 
+ * En este archivo compara modelos que tienen diversos valores de momentum,
+ * el coeficiente que controla cuánto se toma en cuenta la dirección 
+ * previa del descenso de gradiente.
+ */
+  
+// ════════════════════════════════════════════════════════════════════════════
 // MÓDULO: MOMENTUM
-// Variable : β (coeficiente de momentum) ∈ {0.0, 0.3, 0.6, 0.9} — 4 modelos fijos
+// Variable : β (coeficiente de momentum) ∈ {0.0, 0.2, 0.4, 0.6, 0.8, 0.9} 
 // Fijo     : η=0.05, Xavier (semilla=1), ReLU, red 2→4→1
-// ══════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 
-// ── 1. CONFIGURACIÓN ──────────────────────────────────────────────────────────
+// ── 1. CONFIGURACIÓN ────────────────────────────────────────────────────────
 
 const BETAS_MOMENTUM = [0.0, 0.2, 0.4, 0.6, 0.8, 0.9];
 
-// ── 2. GENERACIÓN DEL ENJAMBRE ────────────────────────────────────────────────
+// ── 2. GENERACIÓN DEL ENJAMBRE ──────────────────────────────────────────────
 
-function generarEnjambreMomentum() {
+function generarEnjambreMomentum() 
+{
   modelos = BETAS_MOMENTUM.map((b) => {
     let m = crearModelo([2, 4, 1], 'relu', 0.05, 0, 1, 'xavier', b);
     m.etiqueta = `β=${b.toFixed(1)}`;
@@ -24,9 +37,11 @@ function generarEnjambreMomentum() {
 
 // ── 3. CONTROLES PANEL 3 (DOM) ────────────────────────────────────────────────
 
-function crearSeccionOverlayMomentum() {
+function crearSeccionOverlayMomentum() 
+{
   const overlay = document.getElementById('panel3-overlay');
-  if (!overlay) return;
+  if (!overlay) 
+    return;
   const div = document.createElement('div');
   div.id = 'controles-momentum';
   div.style.display = 'none';
@@ -51,7 +66,8 @@ function crearSeccionOverlayMomentum() {
 
   document.getElementById('input-epocas-mom').addEventListener('change', e => {
     const v = parseInt(e.target.value);
-    if (!isNaN(v)) maximoEpocas = Math.max(50, Math.min(5000, v));
+    if (!isNaN(v)) 
+      maximoEpocas = Math.max(50, Math.min(5000, v));
   });
   document.getElementById('select-velocidad-mom').addEventListener('change', e => {
     velocidad = e.target.value;
@@ -65,17 +81,21 @@ function actualizarUIEstadoMomentum() {
 
   ['input-epocas-mom', 'select-velocidad-mom'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.disabled = bloqueado;
+    if (el) 
+      el.disabled = bloqueado;
   });
 
   const btnPaso = document.getElementById('btn-paso-mom');
-  if (btnPaso) btnPaso.disabled = bloqueadoPaso;
+  if (btnPaso) 
+    btnPaso.disabled = bloqueadoPaso;
 }
 
 // ── 4. VISUALIZACIÓN PANEL 3 (p5.js) ─────────────────────────────────────────
 
-function dibujarCirculosMomentum(r3) {
-  if (!modelos || modelos.length === 0) return;
+function dibujarCirculosMomentum(r3) 
+{
+  if (!modelos || modelos.length === 0) 
+    return;
 
   const DIAM   = 18;
   const SEP    = 52;
