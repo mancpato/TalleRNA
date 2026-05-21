@@ -2,6 +2,28 @@
 // panel4.js — Estadísticas del enjambre y visualización de red neuronal
 // ============================================================================
 
+// Posiciones normalizadas [0,1] para cada arquitectura soportada.
+// x: posición horizontal de la capa; y[]: posiciones verticales de los nodos.
+// Para arquitecturas no listadas, se usa una función de fallback.
+const LAYOUT_RED = (() => {
+  function _layout(capas) {
+    const nCapas = capas.length;
+    return capas.map((n, c) => ({
+      x: nCapas === 1 ? 0.5 : c / (nCapas - 1),
+      y: Array.from({ length: n }, (_, i) => (i + 1) / (n + 1))
+    }));
+  }
+  const arqs = [
+    [2, 1], [2, 2, 1], [2, 4, 1], [2, 6, 1], [2, 4, 4, 1], [2, 6, 4, 1]
+  ];
+  const out = {};
+  for (const c of arqs) out[c.join(',')] = _layout(c);
+  return out;
+})();
+
+let _wMaxCache     = 0.001;
+let _wMaxModeloRef = null;
+
 function dibujarResumenPanel4() {
   if (!modelos || modelos.length === 0) return;
   const r = panelRect(4);
@@ -58,47 +80,57 @@ function dibujarRedPanel4() {
   const rx0 = r.x + r.w - RW - 44;
   const ry0 = r.y + r.h - RH - 22;
 
-  const capas  = [2, 4, 1];
+  const m = modeloSeleccionado !== null ? modelos[modeloSeleccionado] : null;
+
+  // Determinar arquitectura a dibujar
+  const capas   = m ? m.capas : [2, 4, 1];
+  const key     = capas.join(',');
+  const layout  = LAYOUT_RED[key] ?? (() => {
+    // fallback dinámico para arquitecturas no en la tabla
+    const nC = capas.length;
+    return capas.map((n, c) => ({
+      x: nC === 1 ? 0.5 : c / (nC - 1),
+      y: Array.from({ length: n }, (_, i) => (i + 1) / (n + 1))
+    }));
+  })();
+
   const nCapas = capas.length;
   const RADIO  = 10;
 
+  // Recalcular wMax solo cuando cambia el modelo seleccionado
+  if (m !== _wMaxModeloRef) {
+    _wMaxModeloRef = m;
+    _wMaxCache = 0.001;
+    if (m && m.pesos) {
+      for (const capa of m.pesos)
+        for (const w of capa)
+          if (Math.abs(w) > _wMaxCache) _wMaxCache = Math.abs(w);
+    }
+  }
+  const wMax = _wMaxCache;
+
+  // Convertir posiciones normalizadas a píxeles
+  const xs = layout.map(capa => rx0 + capa.x * RW);
+  const ys = layout.map(capa => capa.y.map(yn => ry0 + yn * RH));
+
   const COLOR_NODO = [
-    [200, 100, 100],
-    [80,  130, 200],
-    [80,  180, 120]
+    [200, 100, 100],  // entrada
+    [80,  130, 200],  // oculta(s)
+    [80,  180, 120]   // salida
   ];
 
-  const xs         = capas.map((_, c) => rx0 + (c / (nCapas - 1)) * RW);
-  const margenV    = RADIO * 2.5;
-  const pasoOculta = (RH - 2 * margenV) / 3;
-  const ys         = [null, null, null];
-  ys[1] = Array.from({ length: 4 }, (_, i) => ry0 + margenV + i * pasoOculta);
-  const centroOculta = (ys[1][0] + ys[1][3]) / 2;
-  ys[0] = [centroOculta - RADIO * 2.5, centroOculta + RADIO * 2.5];
-  ys[2] = [centroOculta];
-
-  const idx = modeloSeleccionado !== null ? modeloSeleccionado : null;
-  const m   = idx !== null ? modelos[idx] : null;
-
-  let wMax = 0.001;
-  if (m && m.pesos) {
-    for (const capa of m.pesos)
-      for (const w of capa)
-        if (Math.abs(w) > wMax) wMax = Math.abs(w);
+  // Posiciones de nodos bias (entre capas adyacentes)
+  const TB    = 8;
+  const xBias = [];
+  const yBias = [];
+  for (let c = 0; c < nCapas - 1; c++) {
+    xBias.push(xs[c] + (xs[c + 1] - xs[c]) * 0.28);
+    const allY = [...ys[c], ...ys[c + 1]];
+    yBias.push(Math.max(...allY) + RADIO * 2.2 - TB * 2);
   }
 
-  const TB   = 8;
-  const xBias = [
-    xs[0] + (xs[1] - xs[0]) * 0.28,
-    xs[1] + (xs[2] - xs[1]) * 0.28
-  ];
-  const yBias = [
-    Math.max(...ys[0], ...ys[1]) + RADIO * 2.2 - TB * 2,
-    Math.max(...ys[1], ...ys[2]) + RADIO * 2.2 - TB * 2
-  ];
-
   // Conexiones bias
-  for (let c = 0; c < 2; c++) {
+  for (let c = 0; c < nCapas - 1; c++) {
     const nOut = capas[c + 1];
     for (let j = 0; j < nOut; j++) {
       let cr, cg, cb, alfa, grosor;
@@ -135,7 +167,9 @@ function dibujarRedPanel4() {
 
   // Nodos
   for (let c = 0; c < nCapas; c++) {
-    const [nr, ng, nb] = COLOR_NODO[Math.min(c, COLOR_NODO.length - 1)];
+    // Capas ocultas usan índice 1 de COLOR_NODO; entrada=0, salida=última
+    const colorIdx = c === 0 ? 0 : c === nCapas - 1 ? 2 : 1;
+    const [nr, ng, nb] = COLOR_NODO[colorIdx];
     for (let i = 0; i < capas[c]; i++) {
       fill(nr, ng, nb, 200); stroke(nr * 0.6, ng * 0.6, nb * 0.6); strokeWeight(1.5);
       ellipse(xs[c], ys[c][i], RADIO * 2);
@@ -144,22 +178,25 @@ function dibujarRedPanel4() {
 
   // Nodos bias (triángulos)
   fill(255, 220, 50); stroke(180, 150, 0); strokeWeight(1.5);
-  for (let c = 0; c < 2; c++) {
+  for (let c = 0; c < nCapas - 1; c++) {
     const bx = xBias[c], by = yBias[c];
     triangle(bx, by - TB, bx - TB, by + TB, bx + TB, by + TB);
   }
 
-  // Etiquetas
+  // Etiquetas de capa
   noStroke(); fill(60); textSize(11); textAlign(CENTER, BOTTOM);
-  const etiqCapa = ['Entrada', 'Oculta', 'Salida'];
-  for (let c = 0; c < nCapas; c++)
-    text(etiqCapa[c], xs[c], ry0 - 3);
+  for (let c = 0; c < nCapas; c++) {
+    const etiq = c === 0 ? 'Entrada' : c === nCapas - 1 ? 'Salida' : `Oc.${c}`;
+    text(etiq, xs[c], ry0 - 3);
+  }
 
+  // Etiquetas x₁, x₂
   const subIdx = ['₁', '₂'];
   textAlign(RIGHT, CENTER); textSize(11); fill(60);
   for (let i = 0; i < capas[0]; i++)
-    text('x' + subIdx[i], xs[0] - RADIO - 3, ys[0][i]);
+    text('x' + (subIdx[i] ?? (i + 1)), xs[0] - RADIO - 3, ys[0][i]);
 
+  // Etiqueta y
   noStroke(); fill(60); textSize(12); textStyle(BOLD); textAlign(LEFT, CENTER);
   text('y', xs[nCapas - 1] + RADIO + 6, ys[nCapas - 1][0]);
   textStyle(NORMAL);

@@ -50,11 +50,14 @@ function inicializarPaletas() {
     azul: color('#2277BB')
   };
 
-  PALETAS.topologia = [
-    color('#888780'), color('#B5D4F4'), color('#85B7EB'),
-    color('#378ADD'), color('#97C459'), color('#639922'),
-    color('#3B6D11'), color('#1D9E75')
-  ];
+  PALETAS.topologia = {
+    T0: color('#888780'),
+    T1: color('#B5D4F4'),
+    T2: color('#378ADD'),
+    T3: color('#97C459'),
+    T4: color('#639922'),
+    T5: color('#1D9E75')
+  };
 }
 
 // ============================================================================

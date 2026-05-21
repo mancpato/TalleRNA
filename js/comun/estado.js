@@ -163,10 +163,15 @@ function crearOverlayPanel3() {
   overlay.id = 'panel3-overlay';
   // Solo el botón principal es común a todos los módulos
   overlay.innerHTML = `
-    <button id="btn-principal">Entrenar enjambre</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="btn-principal">Entrenar enjambre</button>
+      <button id="btn-reiniciar-paused" style="display:none">Reiniciar</button>
+    </div>
     <hr class="p3-sep">
   `;
   document.body.appendChild(overlay);
+
+  document.getElementById('btn-reiniciar-paused').addEventListener('click', resetear);
 
   document.getElementById('btn-principal').addEventListener('click', () => {
     if      (enEstado('IDLE'))      iniciarEntrenamiento();
@@ -203,6 +208,10 @@ function actualizarUIEstado() {
     };
     btn.textContent = etiquetas[estado] || 'Entrenar enjambre';
   }
+
+  // Botón reiniciar en PAUSED
+  const btnReinPaused = document.getElementById('btn-reiniciar-paused');
+  if (btnReinPaused) btnReinPaused.style.display = enEstado('PAUSED') ? 'inline-block' : 'none';
 
   // Barra global (común)
   const enMovimiento = enEstado('RUNNING', 'PAUSED');

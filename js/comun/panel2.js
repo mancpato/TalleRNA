@@ -2,6 +2,13 @@
 // panel2.js — Historial de pérdida (curvas J_train / J_test)
 // ============================================================================
 
+function _xMaxPanel2() {
+  const epocaMax = (modelos && modelos.length > 0)
+    ? Math.max(...modelos.map(m => m.historial?.length ?? 0))
+    : 10;
+  return Math.max(epocaMax * 1.08, 10);
+}
+
 function _panel2PlotArea() {
   const r = panelRect(2);
   const PAD_L = 42, PAD_R = 12, PAD_T = 38, PAD_B = 36;
@@ -13,8 +20,8 @@ function _panel2PlotArea() {
   };
 }
 
-function _epToX(ep, totalEpocas, plot) {
-  return plot.x + (ep / Math.max(totalEpocas, 1)) * plot.w;
+function _epToX(ep, xMax, plot) {
+  return plot.x + (ep / Math.max(xMax, 1)) * plot.w;
 }
 
 function _calcularRangoY() {
@@ -68,7 +75,7 @@ function dibujarHistorialPanel2() {
     return;
   }
 
-  const totalEpocas = maximoEpocas;
+  const xMax = _xMaxPanel2();
   const { yMin, yMax } = _calcularRangoY();
 
   // Grilla
@@ -94,15 +101,23 @@ function dibujarHistorialPanel2() {
     text(etiq, plot.x - 3, ty);
   }
 
-  // Etiquetas eje X
+  // Etiquetas eje X — intervalo adaptativo
+  function tickNice(xMax) {
+    const objetivo = 6;
+    const crudo = xMax / objetivo;
+    const mag = Math.pow(10, Math.floor(Math.log10(crudo)));
+    const r = crudo / mag;
+    let paso;
+    if      (r < 1.5) paso = 1;
+    else if (r < 3.5) paso = 2;
+    else if (r < 7.5) paso = 5;
+    else              paso = 10;
+    return paso * mag;
+  }
+  const intervalo = tickNice(xMax);
   noStroke(); fill(120); textSize(11); textAlign(CENTER, TOP);
-  const pasoX = totalEpocas <= 50  ? 10
-              : totalEpocas <= 200 ? 25
-              : totalEpocas <= 500 ? 50
-              : totalEpocas <= 1000 ? 100
-              : totalEpocas <= 2000 ? 200 : 500;
-  for (let ep = 0; ep <= totalEpocas; ep += pasoX)
-    text(ep, _epToX(ep, totalEpocas, plot), plot.y + plot.h + 3);
+  for (let ep = 0; ep <= xMax; ep += intervalo)
+    text(Math.round(ep), _epToX(ep, xMax, plot), plot.y + plot.h + 3);
 
   // Línea J* de referencia
   if (modeloReferencia !== null) {
@@ -143,7 +158,7 @@ function dibujarHistorialPanel2() {
     for (let ep = 0; ep < m.historial.length; ep++) {
       const val = m.historial[ep][campo];
       if (val === undefined || val === null) continue;
-      vertex(_epToX(ep, totalEpocas, plot), _valToY(val, plot, yMin, yMax));
+      vertex(_epToX(ep, xMax, plot), _valToY(val, plot, yMin, yMax));
     }
     endShape();
   }
@@ -162,7 +177,7 @@ function dibujarHistorialPanel2() {
       for (let ep = 0; ep < m.historial.length; ep++) {
         const val = m.historial[ep][campoTest];
         if (val === undefined || val === null) continue;
-        vertex(_epToX(ep, totalEpocas, plot), _valToY(val, plot, yMin, yMax));
+        vertex(_epToX(ep, xMax, plot), _valToY(val, plot, yMin, yMax));
       }
       endShape();
       drawingContext.setLineDash([]);

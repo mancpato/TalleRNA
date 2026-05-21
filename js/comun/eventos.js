@@ -106,7 +106,7 @@ function mousePressed(event) {
           for (let ep = 0; ep < m.historial.length; ep++) {
             const val = m.historial[ep][campo];
             if (val === undefined || val === null) continue;
-            const cx = _epToX(ep, maximoEpocas, plot);
+            const cx = _epToX(ep, _xMaxPanel2(), plot);
             const cy = _valToY(val, plot, yMin, yMax);
             const d  = Math.hypot(mouseX - cx, mouseY - cy);
             if (d < mejorDist) { mejorDist = d; mejorIdx = i; }
@@ -150,7 +150,7 @@ function mouseMoved() {
           for (let ep = 0; ep < m.historial.length; ep++) {
             const val = m.historial[ep][campo];
             if (val === undefined || val === null) continue;
-            const cx = _epToX(ep, maximoEpocas, plot);
+            const cx = _epToX(ep, _xMaxPanel2(), plot);
             const cy = _valToY(val, plot, yMin, yMax);
             const d  = Math.hypot(mouseX - cx, mouseY - cy);
             if (d < mejorDist) { mejorDist = d; mejorIdx = i; }

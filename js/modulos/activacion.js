@@ -89,8 +89,14 @@ function crearSeccionOverlayActivacion() {
   div.style.display = 'none';
   div.innerHTML = `
     <div class="p3-row">
-      <label>Épocas máx.:&nbsp;<input type="number" id="input-epocas-act"
-        min="50" max="5000" step="50" value="500" style="width:56px"></label>
+      <label>Épocas máx.:&nbsp;<select id="select-epocas-act">
+        <option value="500">500</option>
+        <option value="1000" selected>1000</option>
+        <option value="2000">2000</option>
+        <option value="5000">5000</option>
+        <option value="10000">10000</option>
+        <option value="20000">20000</option>
+      </select></label>
       <label style="margin-left:10px">Velocidad:&nbsp;
         <select id="select-velocidad-act">
           <option value="lenta">Lenta</option>
@@ -109,9 +115,8 @@ function crearSeccionOverlayActivacion() {
   overlay.appendChild(div);
 
   // Épocas y velocidad
-  document.getElementById('input-epocas-act').addEventListener('change', e => {
-    const v = parseInt(e.target.value);
-    if (!isNaN(v)) maximoEpocas = Math.max(50, Math.min(5000, v));
+  document.getElementById('select-epocas-act').addEventListener('change', e => {
+    maximoEpocas = parseInt(e.target.value);
   });
   document.getElementById('select-velocidad-act').addEventListener('change', e => {
     velocidad = e.target.value;
@@ -161,7 +166,7 @@ function actualizarUIEstadoActivacion() {
   const bloqueado     = enEstado('RUNNING', 'PAUSED');
   const bloqueadoPaso = enEstado('RUNNING', 'CONVERGED');
 
-  ['input-epocas-act',
+  ['select-epocas-act',
    'cb-act-relu', 'cb-act-sigmoid', 'cb-act-tanh',
    'cb-act-lineal', 'cb-act-leaky_relu',
    'cb-act-elu', 'cb-act-escalon'].forEach(id => {

@@ -82,12 +82,13 @@ function generarDatos(problema, nivelRuido, trainRatio, semilla)
   const sigma = nivelRuido * 0.25; // Ajuste de ruido para que sea visible pero no excesivo
 
   let datos = [];
+  let vueltas = 3;
 
   if (problema === 'espiral') {
     for (let clase = 0; clase < 2; clase++) {
       for (let i = 0; i < 100; i++) {
-        const t = (i / 100) * (10 * Math.PI); 
-        const r = t / (10 * Math.PI); 
+        const t = (i / 100) * (vueltas * Math.PI); 
+        const r = t / (vueltas * Math.PI); 
         const angulo = t + clase * Math.PI;
         let x1 = r * Math.cos(angulo);
         let x2 = r * Math.sin(angulo);

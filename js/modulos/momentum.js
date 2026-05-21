@@ -47,8 +47,14 @@ function crearSeccionOverlayMomentum()
   div.style.display = 'none';
   div.innerHTML = `
     <div class="p3-row">
-      <label>Épocas máx.:&nbsp;<input type="number" id="input-epocas-mom"
-        min="50" max="5000" step="50" value="500" style="width:56px"></label>
+      <label>Épocas máx.:&nbsp;<select id="select-epocas-mom">
+        <option value="500">500</option>
+        <option value="1000" selected>1000</option>
+        <option value="2000">2000</option>
+        <option value="5000">5000</option>
+        <option value="10000">10000</option>
+        <option value="20000">20000</option>
+      </select></label>
       <label style="margin-left:10px">Velocidad:&nbsp;
         <select id="select-velocidad-mom">
           <option value="lenta">Lenta</option>
@@ -64,10 +70,8 @@ function crearSeccionOverlayMomentum()
   `;
   overlay.appendChild(div);
 
-  document.getElementById('input-epocas-mom').addEventListener('change', e => {
-    const v = parseInt(e.target.value);
-    if (!isNaN(v)) 
-      maximoEpocas = Math.max(50, Math.min(5000, v));
+  document.getElementById('select-epocas-mom').addEventListener('change', e => {
+    maximoEpocas = parseInt(e.target.value);
   });
   document.getElementById('select-velocidad-mom').addEventListener('change', e => {
     velocidad = e.target.value;
@@ -79,7 +83,7 @@ function actualizarUIEstadoMomentum() {
   const bloqueado     = enEstado('RUNNING', 'PAUSED');
   const bloqueadoPaso = enEstado('RUNNING', 'CONVERGED');
 
-  ['input-epocas-mom', 'select-velocidad-mom'].forEach(id => {
+  ['select-epocas-mom', 'select-velocidad-mom'].forEach(id => {
     const el = document.getElementById(id);
     if (el) 
       el.disabled = bloqueado;

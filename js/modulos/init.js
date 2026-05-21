@@ -83,8 +83,14 @@ function crearSeccionOverlayInit() {
   div.style.display = 'none';
   div.innerHTML = `
     <div class="p3-row">
-      <label>Épocas máx.:&nbsp;<input type="number" id="input-epocas-init"
-        min="50" max="5000" step="50" value="500" style="width:56px"></label>
+      <label>Épocas máx.:&nbsp;<select id="select-epocas-init">
+        <option value="500">500</option>
+        <option value="1000" selected>1000</option>
+        <option value="2000">2000</option>
+        <option value="5000">5000</option>
+        <option value="10000">10000</option>
+        <option value="20000">20000</option>
+      </select></label>
       <label style="margin-left:10px">Velocidad:&nbsp;<select id="select-velocidad-init">
         <option value="lenta">Lenta</option>
         <option value="normal" selected>Normal</option>
@@ -114,9 +120,8 @@ function crearSeccionOverlayInit() {
   `;
   overlay.appendChild(div);
 
-  document.getElementById('input-epocas-init').addEventListener('change', e => {
-    const v = parseInt(e.target.value);
-    if (!isNaN(v)) maximoEpocas = Math.max(50, Math.min(5000, v));
+  document.getElementById('select-epocas-init').addEventListener('change', e => {
+    maximoEpocas = parseInt(e.target.value);
   });
   document.getElementById('select-velocidad-init').addEventListener('change', e => {
     velocidad = e.target.value;
@@ -168,7 +173,7 @@ function _actualizarDisplaySemillas() {
 function actualizarUIEstadoInit() {
   const bloqueado     = enEstado('RUNNING', 'PAUSED');
   const bloqueadoPaso = enEstado('RUNNING', 'CONVERGED');
-  ['input-epocas-init', 'cb-uniforme', 'cb-normal', 'cb-xavier', 'cb-he'].forEach(id => {
+  ['select-epocas-init', 'cb-uniforme', 'cb-normal', 'cb-xavier', 'cb-he'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = bloqueado;
   });

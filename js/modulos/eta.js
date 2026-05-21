@@ -72,8 +72,14 @@ function crearSeccionOverlayEta() {
   div.id = 'controles-eta';
   div.innerHTML = `
     <div class="p3-row">
-      <label>Épocas máx.:&nbsp;<input type="number" id="input-epocas"
-        min="50" max="5000" step="50" value="500" style="width:56px"></label>
+      <label>Épocas máx.:&nbsp;<select id="select-epocas-eta">
+        <option value="500">500</option>
+        <option value="1000" selected>1000</option>
+        <option value="2000">2000</option>
+        <option value="5000">5000</option>
+        <option value="10000">10000</option>
+        <option value="20000">20000</option>
+      </select></label>
       <label style="margin-left:10px">Velocidad:&nbsp;<select id="select-velocidad">
         <option value="lenta">Lenta</option>
         <option value="normal" selected>Normal</option>
@@ -109,9 +115,8 @@ function crearSeccionOverlayEta() {
   slMin.value = Math.log10(etaMinVal);
   slMax.value = Math.log10(etaMaxVal);
 
-  document.getElementById('input-epocas').addEventListener('change', e => {
-    const v = parseInt(e.target.value);
-    if (!isNaN(v)) maximoEpocas = Math.max(50, Math.min(5000, v));
+  document.getElementById('select-epocas-eta').addEventListener('change', e => {
+    maximoEpocas = parseInt(e.target.value);
   });
   document.getElementById('select-velocidad').addEventListener('change', e => {
     velocidad = e.target.value;
@@ -141,7 +146,7 @@ function crearSeccionOverlayEta() {
 function actualizarUIEstadoEta() {
   const bloqueado     = enEstado('RUNNING', 'PAUSED');
   const bloqueadoPaso = enEstado('RUNNING', 'CONVERGED');
-  ['slider-eta-min', 'slider-eta-max', 'input-epocas'].forEach(id => {
+  ['slider-eta-min', 'slider-eta-max', 'select-epocas-eta'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = bloqueado;
   });
