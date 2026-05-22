@@ -29,7 +29,19 @@
 
 // ── 2. GENERACIÓN DEL ENJAMBRE ────────────────────────────────────────────────
 
-function generarEnjambreEta(etaMin, etaMax, N) {
+function calcularEtasSecuencia(etaMin, etaMax) {
+  const etas = [];
+  let v = etaMin;
+  while (v <= etaMax * (1 + 1e-9)) {
+    etas.push(Math.min(v, etaMax));
+    if (v >= etaMax) break;
+    v *= 2;
+  }
+  if (etas[etas.length - 1] < etaMax - 1e-9) etas.push(etaMax);
+  return etas;
+}
+
+function generarEnjambreEta(etaMin, etaMax) {
   modelos = [];
   modeloReferencia   = null;
   modeloSeleccionado = null;
@@ -38,15 +50,13 @@ function generarEnjambreEta(etaMin, etaMax, N) {
   modoLogPanel2 = false;
   modoAccPanel2 = false;
 
-  const etas = [];
-  if (N === 1) etas.push(etaMin);
-  else for (let i = 0; i < N; i++)
-    etas.push(etaMin + (etaMax - etaMin) * i / (N - 1));
+  const etas = calcularEtasSecuencia(etaMin, etaMax);
+  const N = etas.length;
 
-  for (let i = 0; i < etas.length; i++) {
+  for (let i = 0; i < N; i++) {
     const eta_i = etas[i];
     const m = crearModelo([2, 4, 1], 'relu', eta_i, 0, 1, 'xavier');
-    m.id      = i;
+    m.id       = i;
     m.etiqueta = `η=${eta_i.toFixed(3)}`;
 
     const t = N === 1 ? 0 : i / (N - 1);
@@ -60,6 +70,9 @@ function generarEnjambreEta(etaMin, etaMax, N) {
   modeloReferencia = 0;
   modeloMapa = modelos[0];
   renderizarMapa(modelos[0]);
+
+  const contEl = document.getElementById('val-n-modelos-eta');
+  if (contEl) contEl.textContent = N;
 }
 
 // ── 3. CONTROLES PANEL 3 (DOM) ────────────────────────────────────────────────
@@ -90,18 +103,14 @@ function crearSeccionOverlayEta() {
     <hr class="p3-sep">
     <div class="p3-row">
       <label>η mín.:&nbsp;<input type="range" id="slider-eta-min" style="width:110px"></label>
-      <span id="val-eta-min" style="margin-left:6px;min-width:38px">0.010</span>
+      <span id="val-eta-min" style="margin-left:6px;min-width:38px">0.005</span>
     </div>
     <div class="p3-row" style="margin-top:2px">
       <label>η máx.:&nbsp;<input type="range" id="slider-eta-max" style="width:110px"></label>
-      <span id="val-eta-max" style="margin-left:6px;min-width:38px">0.300</span>
+      <span id="val-eta-max" style="margin-left:6px;min-width:38px">0.500</span>
     </div>
-    <div class="p3-row" style="margin-top:4px">
-      Modelos:&nbsp;
-      <label><input type="radio" name="nmodelos" value="4">&nbsp;4</label>&nbsp;&nbsp;
-      <label><input type="radio" name="nmodelos" value="6" checked>&nbsp;6</label>&nbsp;&nbsp;
-      <label><input type="radio" name="nmodelos" value="8">&nbsp;8</label>&nbsp;&nbsp;
-      <label><input type="radio" name="nmodelos" value="10">&nbsp;10</label>
+    <div class="p3-row" style="margin-top:4px;color:#555">
+      N modelos:&nbsp;<span id="val-n-modelos-eta" style="font-weight:bold">8</span>
     </div>
   `;
   overlay.appendChild(div);
@@ -125,7 +134,15 @@ function crearSeccionOverlayEta() {
     let vMin = Math.pow(10, parseFloat(e.target.value));
     if (vMin > 0.498) vMin = 0.500;
     etaMinVal = vMin;
-    document.getElementById('val-eta-min').textContent = vMin.toFixed(3);
+    if (etaMinVal > etaMaxVal) {
+      etaMaxVal = etaMinVal;
+      document.getElementById('slider-eta-max').value = e.target.value;
+      document.getElementById('val-eta-max').textContent = etaMaxVal.toFixed(3);
+    }
+    document.getElementById('val-eta-min').textContent = etaMinVal.toFixed(3);
+    const n = calcularEtasSecuencia(etaMinVal, etaMaxVal).length;
+    const contEl = document.getElementById('val-n-modelos-eta');
+    if (contEl) contEl.textContent = n;
     clearTimeout(_debounceEta);
     _debounceEta = setTimeout(() => resetear(), 300);
   });
@@ -133,12 +150,17 @@ function crearSeccionOverlayEta() {
     let vMax = Math.pow(10, parseFloat(e.target.value));
     if (vMax > 0.498) vMax = 0.500;
     etaMaxVal = vMax;
-    document.getElementById('val-eta-max').textContent = vMax.toFixed(3);
+    if (etaMaxVal < etaMinVal) {
+      etaMinVal = etaMaxVal;
+      document.getElementById('slider-eta-min').value = e.target.value;
+      document.getElementById('val-eta-min').textContent = etaMinVal.toFixed(3);
+    }
+    document.getElementById('val-eta-max').textContent = etaMaxVal.toFixed(3);
+    const n = calcularEtasSecuencia(etaMinVal, etaMaxVal).length;
+    const contEl = document.getElementById('val-n-modelos-eta');
+    if (contEl) contEl.textContent = n;
     clearTimeout(_debounceEta);
     _debounceEta = setTimeout(() => resetear(), 300);
-  });
-  document.querySelectorAll('input[name="nmodelos"]').forEach(r => {
-    r.addEventListener('change', () => { nModelosEta = parseInt(r.value); resetear(); });
   });
   document.getElementById('btn-paso-eta').addEventListener('click', avanzar100);
 }
@@ -149,9 +171,6 @@ function actualizarUIEstadoEta() {
   ['slider-eta-min', 'slider-eta-max', 'select-epocas-eta'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = bloqueado;
-  });
-  document.querySelectorAll('input[name="nmodelos"]').forEach(r => {
-    r.disabled = bloqueado;
   });
   const btnPaso = document.getElementById('btn-paso-eta');
   if (btnPaso) btnPaso.disabled = bloqueadoPaso;

@@ -1,22 +1,24 @@
 /**
  * TalleRNA: Taller de Redes Neuronales Artificiales
  * @file: topologia.js
- * @description: Módulo para comparar 6 arquitecturas fijas de red neuronal.
- * Variable: topología (T0–T5). Fijo: η=0.05, Xavier semilla=1, ReLU, sin dropout.
+ * @description: Módulo para comparar 8 arquitecturas fijas de red neuronal.
+ * Variable: topología (T0–T7). Fijo: η=0.05, Xavier semilla=1, ReLU, sin dropout.
  */
 
 // ── 1. CONFIGURACIÓN ──────────────────────────────────────────────────────────
 
 const TOPOLOGIAS_DEF = [
-  { id: 'T0', capas: [2, 1],       etiqueta: 'T0: 2→1'       },
-  { id: 'T1', capas: [2, 2, 1],    etiqueta: 'T1: 2→2→1'     },
-  { id: 'T2', capas: [2, 4, 1],    etiqueta: 'T2: 2→4→1'     },
-  { id: 'T3', capas: [2, 6, 1],    etiqueta: 'T3: 2→6→1'     },
-  { id: 'T4', capas: [2, 4, 4, 1], etiqueta: 'T4: 2→4→4→1'   },
-  { id: 'T5', capas: [2, 6, 4, 1], etiqueta: 'T5: 2→6→4→1'   }
+  { id: 'T0', capas: [2, 1],          etiqueta: 'T0: 2→1'         },
+  { id: 'T1', capas: [2, 2, 1],       etiqueta: 'T1: 2→2→1'       },
+  { id: 'T2', capas: [2, 3, 1],       etiqueta: 'T2: 2→3→1'       },
+  { id: 'T3', capas: [2, 4, 1],       etiqueta: 'T3: 2→4→1 ★'     },
+  { id: 'T4', capas: [2, 2, 3, 1],    etiqueta: 'T4: 2→2→3→1'     },
+  { id: 'T5', capas: [2, 3, 2, 1],    etiqueta: 'T5: 2→3→2→1'     },
+  { id: 'T6', capas: [2, 4, 4, 1],    etiqueta: 'T6: 2→4→4→1'     },
+  { id: 'T7', capas: [2, 6, 4, 1],    etiqueta: 'T7: 2→6→4→1'     }
 ];
 
-let topologiasActivas  = TOPOLOGIAS_DEF.map(t => t.id);
+let topologiasActivas  = ['T0', 'T3', 'T6'];
 let _debounceTopologia = null;
 
 // ── 2. GENERACIÓN DEL ENJAMBRE ────────────────────────────────────────────────
@@ -42,9 +44,9 @@ function generarEnjambreTopologia() {
     modelos.push(m);
   }
 
-  // modeloReferencia = T2 si está activa, si no el primero
-  const idxT2 = modelos.findIndex(m => m.topoId === 'T2');
-  modeloReferencia = idxT2 >= 0 ? idxT2 : (modelos.length > 0 ? 0 : null);
+  // modeloReferencia = T3 (red base) si está activa, si no el primero
+  const idxT3 = modelos.findIndex(m => m.topoId === 'T3');
+  modeloReferencia = idxT3 >= 0 ? idxT3 : (modelos.length > 0 ? 0 : null);
 
   if (modelos.length > 0) {
     modeloMapa = modelos[modeloReferencia ?? 0];
@@ -87,9 +89,7 @@ function crearSeccionOverlayTopologia() {
     <div style="font-size:11px;color:#888;margin-bottom:4px">
       Selecciona las arquitecturas a comparar:
     </div>
-    <div style="display:flex;gap:12px;margin:6px 0;font-size:12px">
-      <div id="topo-col1" style="display:flex;flex-direction:column;gap:4px;flex:1"></div>
-      <div id="topo-col2" style="display:flex;flex-direction:column;gap:4px;flex:1"></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px 8px;margin:6px 0;font-size:12px" id="topo-grid">
     </div>
   `;
   overlay.appendChild(div);
@@ -102,17 +102,18 @@ function crearSeccionOverlayTopologia() {
   });
   document.getElementById('btn-paso-topo').addEventListener('click', avanzar100);
 
-  // Checkboxes en 2 columnas: col1 = T0,T1,T2 | col2 = T3,T4,T5
-  const col1 = document.getElementById('topo-col1');
-  const col2 = document.getElementById('topo-col2');
-  TOPOLOGIAS_DEF.forEach((topo, idx) => {
-    const col    = idx < 3 ? col1 : col2;
-    const label  = document.createElement('label');
+  // Grid 4×2: columna c = T(c), T(c+4) — orden: T0 T2 T4 T6 / T1 T3 T5 T7
+  const grid = document.getElementById('topo-grid');
+  const orden = [0, 2, 4, 6, 1, 3, 5, 7]; // índices en TOPOLOGIAS_DEF para rellenar por columna
+  orden.forEach(idx => {
+    const topo  = TOPOLOGIAS_DEF[idx];
+    const label = document.createElement('label');
     label.style.display = 'flex';
     label.style.alignItems = 'center';
     label.style.gap = '4px';
-    label.innerHTML = `<input type="checkbox" id="cb-topo-${topo.id}" checked>&nbsp;${topo.etiqueta}`;
-    col.appendChild(label);
+    const checked = topologiasActivas.includes(topo.id) ? 'checked' : '';
+    label.innerHTML = `<input type="checkbox" id="cb-topo-${topo.id}" ${checked}>&nbsp;${topo.etiqueta}`;
+    grid.appendChild(label);
   });
 
   TOPOLOGIAS_DEF.forEach(topo => {

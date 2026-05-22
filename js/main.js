@@ -26,13 +26,14 @@ function setup() {
 
   inicializarPaletas();
 
-  const datosGenerados = generarDatos('xor', 0, 0.8, 4721);
+  const datosGenerados = generarDatos(problema, nivelRuido / 100, trainRatio, semillaDatos);
   const datosNorm = normalizarDatos(datosGenerados.datosTrain, datosGenerados.datosTest);
   datosTrain = datosNorm.datosTrain;
   datosTest = datosNorm.datosTest;
 
   crearOverlayBarra();
   crearOverlayPanel3();
+  actualizarModuloOverlay();
   initEnjambre();
   initDatos();
   initHistorial();

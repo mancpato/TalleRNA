@@ -84,7 +84,20 @@ function generarDatos(problema, nivelRuido, trainRatio, semilla)
   let datos = [];
   let vueltas = 3;
 
-  if (problema === 'espiral') {
+  if (problema === 'lineal') {
+    for (let i = 0; i < 200; i++) {
+      const x1 = rng.next() * 2 - 1;
+      const x2 = rng.next() * 2 - 1;
+      const clase = (x2 > x1) ? 1 : 0;
+      datos.push({
+        x: [
+          x1 + rng.nextGaussian() * sigma,
+          x2 + rng.nextGaussian() * sigma
+        ],
+        y: clase
+      });
+    }
+  } else if (problema === 'espiral') {
     for (let clase = 0; clase < 2; clase++) {
       for (let i = 0; i < 100; i++) {
         const t = (i / 100) * (vueltas * Math.PI); 
@@ -129,20 +142,25 @@ function generarDatos(problema, nivelRuido, trainRatio, semilla)
       }
     }
   } else if (problema === 'medialuna') {
-    for (let clase = 0; clase < 2; clase++) {
-      for (let i = 0; i < 100; i++) {
-        const t = (i / 100) * Math.PI;
-        const r = 0.5;
-        const x1 = r * Math.cos(t) + (clase === 0 ? 0.5 : -0.5);
-        const x2 = r * Math.sin(t) + (clase === 0 ? 0.5 : -0.5);
-        datos.push({
-          x: [
-            x1 + rng.nextGaussian() * sigma,
-            x2 + rng.nextGaussian() * sigma
-          ],
-          y: clase
-        });
-      }
+    // Clase 0: semicírculo superior, centro (0, 0), radio 1
+    // Clase 1: semicírculo inferior, centro (0.5, 0), radio 1
+    // El offset −0.3 acerca las medias lunas verticalemente.
+    for (let i = 0; i < 100; i++) {
+      const t = (i / 99) * Math.PI;
+      datos.push({
+        x: [
+          Math.cos(t)        + rng.nextGaussian() * sigma,
+          Math.sin(t) - 0.5 + rng.nextGaussian() * sigma
+        ],
+        y: 0
+      });
+      datos.push({
+        x: [
+          0.5 + Math.cos(t)  + rng.nextGaussian() * sigma,
+          -Math.sin(t) + 0.2 + rng.nextGaussian() * sigma
+        ],
+        y: 1
+      });
     }
   } else if (problema === 'seno') {
     /* for (let i = 0; i < 200; i++) {
@@ -474,7 +492,8 @@ function backprop(modelo, activaciones, preActivaciones, yReal, tipo) {
   return { dW, db };
 }
 
-function actualizarPesos(modelo, gradientes) {
+function actualizarPesos(modelo, gradientes) 
+{
   const beta = modelo.beta;
   const eta = modelo.eta;
   
@@ -497,8 +516,10 @@ function actualizarPesos(modelo, gradientes) {
   }
 }
 
-function entrenarEpoca(modelo, datosTrain) {
-  if (datosTrain.length === 0) return { J_train: 0 };
+function entrenarEpoca(modelo, datosTrain) 
+{
+  if (datosTrain.length === 0) 
+    return { J_train: 0 };
 
   modelo.stepCount = (modelo.stepCount || 0) + 1; 
 
@@ -540,7 +561,8 @@ function entrenarEpoca(modelo, datosTrain) {
 }
 
 function evaluarTest(modelo, datosTest) {
-  if (datosTest.length === 0) return { J_test: 0, accuracy_test: 0 };
+  if (datosTest.length === 0) 
+    return { J_test: 0, accuracy_test: 0 };
   const X_test = datosTest.map(d => d.x);
   const y_test = datosTest.map(d => d.y);
   const tipoLoss = esTipoClasif ? 'bce' : 'mse'; 
@@ -556,22 +578,28 @@ function evaluarTest(modelo, datosTest) {
   return { J_test, accuracy_test };
 }
 
-function verificarConvergencia(modelo) {
+function verificarConvergencia(modelo) 
+{
   const h = modelo.historial;
-  if (h.length < 2) return false;
+  if (h.length < 2) 
+    return false;
 
   const J_actual   = h[h.length - 1].J_train;
   const J_anterior = h[h.length - 2].J_train;
 
   const cond1 = Math.abs(J_actual - J_anterior) < 1e-4;
-  if (cond1) modelo.contadorConv++;
-  else modelo.contadorConv = 0;
+  if (cond1) 
+    modelo.contadorConv++;
+  else 
+    modelo.contadorConv = 0;
 
-  if (modelo.contadorConv < 30) return false;
+  if (modelo.contadorConv < 30) 
+    return false;
 
   const J_inicial = h[0].J_train;
   const mejora = (J_inicial - J_actual) / (J_inicial + 1e-8);
-  if (mejora < 0.15) return false;
+  if (mejora < 0.15) 
+    return false;
 
   const ultimoH = h[h.length - 1];
   const J_test_final = ultimoH.J_test ?? Infinity;

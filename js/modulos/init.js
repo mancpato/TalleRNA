@@ -114,9 +114,6 @@ function crearSeccionOverlayInit() {
       <label><input type="radio" name="semillas" value="3">&nbsp;3</label>
       <span id="span-semillas-vals" style="font-size:10px;color:#888;margin-left:10px"></span>
     </div>
-    <div style="font-size:11px;color:#666;margin-top:4px">
-      Total de modelos: <span id="span-total-modelos">4</span>
-    </div>
   `;
   overlay.appendChild(div);
 

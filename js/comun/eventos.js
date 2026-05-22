@@ -34,7 +34,7 @@ function _handleClickPanel3Default(mx, my, r3c) {
 
 function mousePressed(event) {
   // ── Pestañas ────────────────────────────────────────────────────────────────
-  const pestanas     = ['eta', 'init', 'activacion', 'momentum', 'topologia'];
+  const pestanas     = ['topologia', 'activacion', 'init', 'eta', 'momentum'];
   const anchoPestana = 140;
   let xTab = 8;
   for (let i = 0; i < pestanas.length; i++) {

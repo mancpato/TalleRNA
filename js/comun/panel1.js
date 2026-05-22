@@ -198,7 +198,7 @@ function dibujarDatosPanel1() {
   line(axMid, ay0, axMid, ay1);
 
   const TICK_SIZE = 4;
-  fill(120); noStroke(); textSize(9); textAlign(CENTER, TOP);
+  fill(0x44); noStroke(); textSize(12); textAlign(CENTER, TOP);
 
   for (let v = -1; v <= 1.001; v += 0.5) {
     const vr = Math.round(v * 10) / 10;
@@ -206,20 +206,20 @@ function dibujarDatosPanel1() {
     stroke(180); strokeWeight(1);
     line(tx, ayMid - TICK_SIZE, tx, ayMid + TICK_SIZE);
     if (Math.abs(vr) > 0.01) {
-      noStroke(); fill(120);
+      noStroke(); fill(0x44, 0x44, 0x44);
       text(vr.toFixed(1), tx, ayMid + TICK_SIZE + 2);
     }
     const { py: ty } = dataToPanel1(0, vr);
     stroke(180); strokeWeight(1);
     line(axMid - TICK_SIZE, ty, axMid + TICK_SIZE, ty);
     if (Math.abs(vr) > 0.01) {
-      noStroke(); fill(120); textAlign(RIGHT, CENTER);
+      noStroke(); fill(0x44, 0x44, 0x44); textAlign(RIGHT, CENTER);
       text(vr.toFixed(1), axMid - TICK_SIZE - 2, ty);
       textAlign(CENTER, TOP);
     }
   }
 
-  fill(80); noStroke(); textSize(10); textAlign(RIGHT, BOTTOM);
+  fill(0x33, 0x33, 0x33); noStroke(); textSize(12); textAlign(RIGHT, BOTTOM);
   text('x₁', ax1 + 12, ayMid + 4);
   textAlign(LEFT, TOP);
   text('x₂', axMid + 3, ay1 - 14);
@@ -232,12 +232,13 @@ function dibujarDatosPanel1() {
     circle(px, py, 8);
   }
 
-  // Datos test
-  strokeWeight(1.5);
+  // Datos test — cruz +
+  const ARM = 4; // mitad del brazo = radio equivalente a circle(8)
   for (const d of datosTest) {
-    fill(color(COLOR_CLASE[d.y])); stroke(255);
     const { px, py } = dataToPanel1(d.x[0], d.x[1]);
-    circle(px, py, 8);
+    stroke(color(COLOR_CLASE[d.y])); strokeWeight(2); noFill();
+    line(px - ARM, py, px + ARM, py);
+    line(px, py - ARM, px, py + ARM);
   }
 
   // Leyenda
@@ -248,7 +249,10 @@ function dibujarDatosPanel1() {
   fill(180); noStroke(); ellipse(lx + 5, ly + 7, 7);
   fill(255); textSize(9); textAlign(LEFT, CENTER); noStroke();
   text('Train', lx + 13, ly + 7);
-  fill(60); stroke(255); strokeWeight(1.5); ellipse(lx + 5, ly + 22, 7);
+  // Cruz de leyenda para Test — color neutro
+  stroke(0xdd, 0xdd, 0xdd); strokeWeight(2); noFill();
+  line(lx + 2, ly + 22, lx + 8, ly + 22);
+  line(lx + 5, ly + 19, lx + 5, ly + 25);
   noStroke(); fill(255); textSize(9); textAlign(LEFT, CENTER);
   text('Test', lx + 13, ly + 22);
 }

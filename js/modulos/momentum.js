@@ -18,21 +18,37 @@
 
 // ── 1. CONFIGURACIÓN ────────────────────────────────────────────────────────
 
-const BETAS_MOMENTUM = [0.0, 0.2, 0.4, 0.6, 0.8, 0.9];
+const BETA_MAX_MOM = 0.9;
+let betaMinMom = 0.0;
+
+function calcularBetasSecuencia(betaMin) {
+  const betas = [];
+  let v = betaMin;
+  while (v < BETA_MAX_MOM - 1e-9) {
+    betas.push(parseFloat(v.toFixed(1)));
+    v = parseFloat((v + 0.2).toFixed(1));
+  }
+  betas.push(BETA_MAX_MOM);
+  return betas;
+}
 
 // ── 2. GENERACIÓN DEL ENJAMBRE ──────────────────────────────────────────────
 
-function generarEnjambreMomentum() 
+function generarEnjambreMomentum()
 {
-  modelos = BETAS_MOMENTUM.map((b) => {
+  const betas = calcularBetasSecuencia(betaMinMom);
+  modelos = betas.map((b) => {
     let m = crearModelo([2, 4, 1], 'relu', 0.05, 0, 1, 'xavier', b);
     m.etiqueta = `β=${b.toFixed(1)}`;
-    const t = b / 0.9;
+    const t = b / BETA_MAX_MOM;
     m.color = lerpColor(PALETAS.momentum.azulClaro, PALETAS.momentum.naranjaOscuro, t);
     return m;
   });
   modeloReferencia = 0;
   modeloSeleccionado = null;
+
+  const contEl = document.getElementById('val-n-modelos-mom');
+  if (contEl) contEl.textContent = betas.length;
 }
 
 // ── 3. CONTROLES PANEL 3 (DOM) ────────────────────────────────────────────────
@@ -65,8 +81,15 @@ function crearSeccionOverlayMomentum()
       <button id="btn-paso-mom" style="margin-left:10px">+100</button>
     </div>
     <hr class="p3-sep">
-    <div style="font-size:11px;color:#555;margin-bottom:2px">6 modelos · β ∈ {0.0, 0.2, 0.4, 0.6, 0.8, 0.9}</div>
-    <div style="font-size:10px;color:#888">η = 0.05 · Xavier · ReLU · 2→4→1</div>
+    <div class="p3-row" style="margin-bottom:4px">
+      β mín.:&nbsp;
+      ${[0.0, 0.2, 0.4, 0.6, 0.8].map(v =>
+        `<label style="margin-right:8px"><input type="radio" name="beta-min-mom" value="${v.toFixed(1)}"${v === 0.0 ? ' checked' : ''}>&nbsp;${v.toFixed(1)}</label>`
+      ).join('')}
+    </div>
+    <div class="p3-row" style="color:#555;font-size:11px;margin-bottom:2px">
+      β máx: 0.9 (fijo)&nbsp;&nbsp;·&nbsp;&nbsp;N modelos: <span id="val-n-modelos-mom" style="font-weight:bold">6</span>
+    </div>
   `;
   overlay.appendChild(div);
 
@@ -75,6 +98,21 @@ function crearSeccionOverlayMomentum()
   });
   document.getElementById('select-velocidad-mom').addEventListener('change', e => {
     velocidad = e.target.value;
+  });
+  document.querySelectorAll('input[name="beta-min-mom"]').forEach(r => {
+    r.addEventListener('change', () => {
+      if (enEstado('RUNNING', 'PAUSED')) {
+        r.checked = false;
+        document.querySelector(`input[name="beta-min-mom"][value="${betaMinMom.toFixed(1)}"]`).checked = true;
+        notificar('Cambio ignorado durante entrenamiento');
+        return;
+      }
+      betaMinMom = parseFloat(r.value);
+      const n = calcularBetasSecuencia(betaMinMom).length;
+      const contEl = document.getElementById('val-n-modelos-mom');
+      if (contEl) contEl.textContent = n;
+      resetear();
+    });
   });
   document.getElementById('btn-paso-mom').addEventListener('click', avanzar100);
 }
@@ -85,8 +123,10 @@ function actualizarUIEstadoMomentum() {
 
   ['select-epocas-mom', 'select-velocidad-mom'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) 
-      el.disabled = bloqueado;
+    if (el) el.disabled = bloqueado;
+  });
+  document.querySelectorAll('input[name="beta-min-mom"]').forEach(r => {
+    r.disabled = bloqueado;
   });
 
   const btnPaso = document.getElementById('btn-paso-mom');

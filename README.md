@@ -15,10 +15,9 @@ rendimiento de cada modelo.
 
 ## Uso
 
-Abrir `index.html` directamente en el navegador,
-o servir con `python3 -m http.server 8000` y abrir
-http://localhost:8000 para evitar restricciones de file://.
-No requiere instalación. Solo depende de p5.js (cargado vía CDN).
+Abrir `index.html` directamente en el navegador.
+No requiere instalación ni servidor local.
+Solo depende de p5.js (cargado vía CDN).
 
 ## Interfaz
 
@@ -31,21 +30,23 @@ No requiere instalación. Solo depende de p5.js (cargado vía CDN).
 
 ## Módulos (pestañas)
 
-- **Tasa de aprendizaje**: ✅ operativo
-- **Inicialización**: ✅ operativo
+- **Topología**: ✅ operativo
 - **Activación**: ✅ operativo
-- **Dropout**: 🚧 en desarrollo
-- **Topología**: 🚧 en desarrollo
+- **Inicialización**: ✅ operativo
+- **Tasa de aprendizaje**: ✅ operativo
+- **Momentum**: ✅ operativo
+- **Dropout**: 🚧 pendiente
 
 ## Problemas disponibles
 
-Espiral · Círculos · XOR · Media luna · Seno (regresión, pendiente)
+Lineal · XOR · Círculos · Media luna · Espiral · Seno (regresión, pendiente)
 
 ## Arquitectura base
 
 Red 2→4→1, activación ReLU, optimizador SGD con momento.
 Toda la aleatoriedad usa un generador LCG con semilla explícita
 para garantizar reproducibilidad entre sesiones.
+El módulo activo al cargar es Topología; el problema por defecto es Lineal.
 
 ## Organización modular
 
@@ -69,6 +70,7 @@ para garantizar reproducibilidad entre sesiones.
         ├── eta.js       (Módulo tasa de aprendizaje)
         ├── init.js      (Módulo inicialización de pesos)
         ├── activacion.js(Módulo función de activación)
+        ├── momentum.js  (Módulo momentum)
         ├── dropout.js   (Módulo dropout)
         └── topologia.js (Módulo topología)
 ```

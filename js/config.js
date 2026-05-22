@@ -53,10 +53,12 @@ function inicializarPaletas() {
   PALETAS.topologia = {
     T0: color('#888780'),
     T1: color('#B5D4F4'),
-    T2: color('#378ADD'),
-    T3: color('#97C459'),
-    T4: color('#639922'),
-    T5: color('#1D9E75')
+    T2: color('#6BAFDE'),
+    T3: color('#378ADD'),
+    T4: color('#C5DB8A'),
+    T5: color('#97C459'),
+    T6: color('#639922'),
+    T7: color('#1D9E75')
   };
 }
 
@@ -64,7 +66,7 @@ function inicializarPaletas() {
 // VARIABLES GLOBALES 
 // ============================================================================
 
-let problema = 'xor';
+let problema = 'lineal';
 let nivelRuido = 0;
 let trainRatio = 0.8;
 let semillaDatos = 4721;
@@ -76,7 +78,7 @@ let datosTest = [];
 let gfxMapa = null;
 let modeloMapa = null;
 let fronteraPrueba = [];
-let moduloActivo = 'eta';
+let moduloActivo = 'topologia';
 let estado = 'IDLE';
 
 let velocidad = 'normal';
@@ -108,9 +110,8 @@ let interfaz = {
 };
 
 // Variables específicas del módulo ETA
-let etaMinVal   = 0.01;
-let etaMaxVal   = 0.30;
-let nModelosEta = 6;
+let etaMinVal = 0.005;
+let etaMaxVal = 0.500;
 
 // Variables específicas del módulo INIT
 const DISTRIBUCIONES = ['uniforme', 'normal', 'xavier', 'he'];

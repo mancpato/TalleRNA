@@ -88,11 +88,11 @@ function dibujarPestanas() {
   const y = 0;
   const h = TAB_HEIGHT;
   const pestanas = [
-    { label: 'Tasa de aprendizaje', id: 'eta'       },
-    { label: 'Inicialización',       id: 'init'      },
+    { label: 'Topología',            id: 'topologia' },
     { label: 'Activación',           id: 'activacion'},
-    { label: 'Momentum',             id: 'momentum'  },
-    { label: 'Topología',            id: 'topologia' }
+    { label: 'Inicialización',       id: 'init'      },
+    { label: 'Tasa de aprendizaje', id: 'eta'       },
+    { label: 'Momentum',             id: 'momentum'  }
   ];
 
   let x = 8;
@@ -112,7 +112,7 @@ function dibujarPestanas() {
   fill(123, 82, 212);
   text('RNA', windowWidth - 12, h / 2);
   fill(60);
-  text('Taller', windowWidth - 12 - textWidth('RNA'), h / 2);
+  text('Talle', windowWidth - 12 - textWidth('RNA'), h / 2);
   textStyle(NORMAL);
 }
 
@@ -146,11 +146,12 @@ function crearOverlayBarra() {
   div.innerHTML = `
     <label>Problema:
       <select id="select-problema">
-        <option value="espiral">espiral</option>
-        <option value="circulos">círculos</option>
-        <option value="xor" selected>XOR</option>
-        <option value="medialuna">media luna</option>
-        <option value="seno" disabled style="color:#aaa">seno (próximamente)</option>
+        <option value="lineal" selected>Lineal</option>
+        <option value="xor">XOR</option>
+        <option value="circulos">Círculos</option>
+        <option value="medialuna">Media luna</option>
+        <option value="espiral">Espiral</option>
+        <option value="seno" disabled style="color:#aaa">Regresión seno (próximamente)</option>
       </select>
     </label>
     <label>Ruido: <input type="range" id="slider-ruido" min="0" max="50" step="1" value="0">

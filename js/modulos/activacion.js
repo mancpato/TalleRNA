@@ -45,7 +45,7 @@ const CB_IDS = [
   ['cb-act-escalon',    'escalon',    'Escalón',    3],
 ];
 
-let activacionesActivas  = CB_IDS.map(([, act]) => act);
+let activacionesActivas  = ['lineal', 'relu', 'sigmoid', 'tanh'];
 let _debounceActivacion  = null;
 
 // ── 2. GENERACIÓN DEL ENJAMBRE ────────────────────────────────────────────────
@@ -134,11 +134,12 @@ function crearSeccionOverlayActivacion() {
     return d;
   });
 
-  CB_IDS.forEach(([id, , label, col]) => {
+  CB_IDS.forEach(([id, act, label, col]) => {
     const wrapper = document.createElement('label');
     wrapper.style.display = 'block';
     const isEscalon = id === 'cb-act-escalon';
-    wrapper.innerHTML = `<input type="checkbox" id="${id}" checked>&nbsp;${label}`
+    const checked = activacionesActivas.includes(act) ? 'checked' : '';
+    wrapper.innerHTML = `<input type="checkbox" id="${id}" ${checked}>&nbsp;${label}`
       + (isEscalon ? '<div style="font-size:10px;color:#aaa;margin-left:18px">∇=0</div>' : '');
     colDivs[col - 1].appendChild(wrapper);
   });

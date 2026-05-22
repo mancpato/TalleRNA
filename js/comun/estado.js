@@ -134,7 +134,7 @@ function stepModelo(m) {
 }
 
 function initEnjambre() {
-  if      (moduloActivo === 'eta')        generarEnjambreEta(etaMinVal, etaMaxVal, nModelosEta);
+  if      (moduloActivo === 'eta')        generarEnjambreEta(etaMinVal, etaMaxVal);
   else if (moduloActivo === 'init')       generarEnjambreInit();
   else if (moduloActivo === 'activacion') generarEnjambreActivacion();
   else if (moduloActivo === 'momentum')   generarEnjambreMomentum();
@@ -192,10 +192,19 @@ function crearOverlayPanel3() {
 }
 
 function actualizarModuloOverlay() {
-  ['eta', 'init', 'activacion', 'momentum', 'dropout', 'topologia'].forEach(mod => {
+  ['topologia', 'activacion', 'init', 'eta', 'momentum', 'dropout'].forEach(mod => {
     const div = document.getElementById(`controles-${mod}`);
     if (div) div.style.display = moduloActivo === mod ? 'block' : 'none';
   });
+  const idEpocas = {
+    topologia: 'select-epocas-topo',
+    activacion: 'select-epocas-act',
+    init:       'select-epocas-init',
+    eta:        'select-epocas-eta',
+    momentum:   'select-epocas-mom'
+  };
+  const sel = document.getElementById(idEpocas[moduloActivo]);
+  if (sel) sel.value = maximoEpocas;
 }
 
 function actualizarUIEstado() {
