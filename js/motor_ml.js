@@ -271,7 +271,8 @@ function derivadaActivacion(z, tipo)
   return result;
 }
 
-function crearModelo(capas, activacion, eta, dropout, semillaPesos, distribucion, beta = 0.9) 
+function crearModelo(capas, activacion, eta, dropout, semillaPesos, 
+                              distribucion, beta = 0.9) 
 {
   const modelo = {
     capas, activacion, eta, dropout, semillaPesos, distribucion, beta,
@@ -283,7 +284,8 @@ function crearModelo(capas, activacion, eta, dropout, semillaPesos, distribucion
   return modelo;
 }
 
-function inicializarPesos(modelo, distribucion, semillaPesos) {
+function inicializarPesos(modelo, distribucion, semillaPesos) 
+{
   const { capas } = modelo;
   const rng = new LCG(semillaPesos);
 
@@ -296,19 +298,23 @@ function inicializarPesos(modelo, distribucion, semillaPesos) {
     const nWeights = nIn * nOut;
 
     let std;
-    if (distribucion === 'uniforme') std = null;
-    else if (distribucion === 'normal') std = 0.1;
-    else if (distribucion === 'xavier') std = Math.sqrt(2 / (nIn + nOut));
-    else if (distribucion === 'he') std = Math.sqrt(2 / nIn);
-    else std = 0.1;
+    if (distribucion === 'uniforme') 
+      std = null;
+    else if (distribucion === 'normal') 
+      std = 0.1;
+    else if (distribucion === 'xavier') 
+      std = Math.sqrt(2 / (nIn + nOut));
+    else if (distribucion === 'he') 
+      std = Math.sqrt(2 / nIn);
+    else 
+      std = 0.1;
 
     const pesos = new Float32Array(nWeights);
     for (let i = 0; i < nWeights; i++) {
-      if (distribucion === 'uniforme') {
+      if (distribucion === 'uniforme')
         pesos[i] = (rng.next() - 0.5); 
-      } else {
+      else 
         pesos[i] = rng.nextGaussian() * std;
-      }
     }
     modelo.pesos.push(pesos);
     modelo.velPesos.push(new Float32Array(nWeights)); 
@@ -319,11 +325,11 @@ function inicializarPesos(modelo, distribucion, semillaPesos) {
   }
 }
 
-function forward(modelo, X, conDropout = false) {
+function forward(modelo, X, conDropout = false) 
+{
   let ejemplos = X;
-  if (X.length > 0 && !Array.isArray(X[0])) {
+  if (X.length > 0 && !Array.isArray(X[0])) 
     ejemplos = [X];
-  }
 
   const n = ejemplos.length;
   const { capas, activacion, dropout, pesos, sesgos } = modelo;
@@ -391,6 +397,11 @@ function forward(modelo, X, conDropout = false) {
 
 // ============================================================================
 // ENTRENAMIENTO Y MÉTRICAS
+// El criterio de convergencia de cada modelo es la combinación de:
+// - Estabilización de la función de pérdida en entrenamiento (variación < 1e-4)
+//   durante al menos 30 épocas consecutivas.
+// - Mejora relativa de al menos 15% respecto a la pérdida inicial.
+// - Pérdida en test al menos un 50% menor que la inicial (baseline).
 // ============================================================================
 
 function calcularLoss(yPred, yReal, tipo) {
