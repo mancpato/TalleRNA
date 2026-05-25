@@ -1,0 +1,42 @@
+name: Sync public repo
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'public/**'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+
+      - name: Clone public repo
+        run: |
+          git clone https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/mancpato/Taller-RNA.git public-repo
+
+      - name: Clear public repo contents
+        run: |
+          find public-repo -mindepth 1 -not -path 'public-repo/.git*' -delete
+
+      - name: Copy public/ contents to public repo root
+        run: |
+          cp -r public/. public-repo/
+
+      - name: Commit and push if there are changes
+        run: |
+          cd public-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to push."
+          else
+            SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+            git commit -m "sync: ${SHORT_SHA}"
+            git push
+          fi
