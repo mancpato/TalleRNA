@@ -1,6 +1,6 @@
 # PROGRESO: TalleRNA
 
-**Última actualización**: 2026-05-22
+**Última actualización**: 2026-05-26
 **Etapa actual**: Polish / fit and finish
 **Estado general**: Etapas 0–3 completas. Módulos Eta, Init, Activación, Momentum y
 Topología operativos. Panel 2 con eje X dinámico. Panel 4 con visualización de red
@@ -109,6 +109,33 @@ botón semilla (⚄). Problema seno deshabilitado.
 - **Select de épocas** en todos los módulos: opciones 500/1000/2000/5000/
   10000/20000, default 1000. Reemplaza el `<input type="number">` anterior.
 
+### Regresión — Cuadrática y Seno — 2026-05-26 ✅
+
+Dos nuevos problemas de regresión agregados al selector, después de Espiral:
+- **Cuadrática**: y = x² + ε, x ∈ [−1, 1], 200 puntos uniformes, ε ~ N(0, nivelRuido·0.01).
+- **Seno**: y = sin(2πx) + ε, x ∈ [0, 1], 200 puntos uniformes.
+
+**Panel 1 adaptado para regresión**
+- Curva ŷ(x) como polilínea (100 puntos) en lugar de frontera de decisión.
+- Datos como puntos neutros sin clases (color gris). Ejes escalados al rango real de y.
+- Mapa de fondo: gradiente continuo proporcional a ŷ(x) por columna (sin clases binarias).
+- Clipping con `drawingContext.clip()` para confinar las curvas al área del panel.
+
+**Comportamiento por tipo de problema**
+- Toggle Pérdida/Accuracy desactivado en regresión (botón `[J/Acc]` solo aparece en clasificación).
+- Accuracy excluida de Panel 4 en regresión.
+- Activación por defecto en módulo Topología cambia a **Tanh** en regresión (barra muestra "Tanh fija"), evitando dead ReLU en problemas de salida suave.
+- Display de arquitectura en barra superior muestra `1→4→1` en regresión.
+- Panel 4 usa `[1, 4, 1]` como arquitectura por defecto cuando ningún modelo está seleccionado.
+
+**Criterio de convergencia separado por tipo**
+- Clasificación (BCE): `|ΔJ| < 1e-4` absoluto, contadorConv ≥ 30, mejora ≥ 15%, J_test < 50% baseline.
+- Regresión (MSE): `|ΔJ| / (J + 1e-8) < 1e-3` relativo, contadorConv ≥ 30. Sin requisito de mejora porcentual sobre baseline (el baseline MSE puede ser muy alto para arquitecturas simples).
+
+**Generadores de enjambre**
+- Todos los módulos usan `esTipoClasif ? 2 : 1` para la primera capa al crear modelos.
+- `calcularFronteraModelo(m)` unifica la lógica: frontera binaria en clasificación, curva de regresión en regresión.
+
 ### Polish / Fit and finish — 2026-05-22 ✅
 
 Ronda de refinamiento de usabilidad y coherencia visual.
@@ -198,8 +225,16 @@ Ningún cambio afecta la lógica de entrenamiento.
 
 ## DECISIONES DE IMPLEMENTACIÓN (adicionales)
 
-- **Convergencia**: contadorConv ≥ 30 épocas de |ΔJ| < 1e-4 AND
-  mejora ≥ 15% sobre J_inicial AND J_test < 50% del baseline.
+- **Convergencia (clasificación)**: contadorConv ≥ 30 épocas de |ΔJ| < 1e-4 AND
+  mejora ≥ 15% sobre J_inicial AND J_test < 50% del baseline (0.693).
+- **Convergencia (regresión)**: contadorConv ≥ 30 épocas de |ΔJ|/(J+1e-8) < 1e-3
+  relativo. Sin requisito de mejora porcentual — el baseline MSE puede ser muy alto
+  para arquitecturas simples (ej. T0) y el criterio sería inalcanzable.
+- **Dead ReLU en regresión suave**: Tanh como activación por defecto en módulo
+  Topología cuando `!esTipoClasif`. ReLU colapsa a salida horizontal desde época 0
+  en problemas de salida continua sin fuerte pendiente positiva.
+- **Seno**: función oscilatoria difícil para redes pequeñas. Convergencia a mínimos
+  locales pobres es comportamiento esperado y pedagógicamente valioso.
 - **Círculos Panel 3 (Eta)**: SEP=48, DIAM=10. Accuracy encima,
   η numérico debajo con prefijo "η=" una sola vez a la izquierda.
 - **Círculos Panel 3 (Init)**: agrupados por distribución. DIAM=14,
@@ -231,8 +266,8 @@ Ningún cambio afecta la lógica de entrenamiento.
 
 | Componente | Prioridad | Notas |
 |------------|-----------|-------|
-| Módulo Dropout | 🟡 | Requiere red 2→4→4→1 |
+| Nota mínimo local en Panel 4 | 🟡 | Mostrar aviso cuando J_test > 0.10 en regresión convergida |
+| Módulo Dropout | 🟡 | Pendiente de implementar |
 | Panel 4 completo | 🟠 | Tabla por modelo |
-| Regresión seno | 🟠 | Visualización 1D en Panel 1 |
 | Símbolo ✕ modelos divergentes | 🟡 | Cruz sobre posición en Panel 1 |
 | Tiempo/costo por arquitectura | 🔵 | Diferido a módulo experimental |

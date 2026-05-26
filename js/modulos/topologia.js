@@ -32,15 +32,17 @@ function generarEnjambreTopologia() {
   modoLogPanel2      = false;
   modoAccPanel2      = false;
 
+  const nEnt = esTipoClasif ? 2 : 1;
   const activas = TOPOLOGIAS_DEF.filter(t => topologiasActivas.includes(t.id));
   for (const topo of activas) {
-    const m    = crearModelo(topo.capas, 'relu', 0.05, 0, 1, 'xavier');
-    m.etiqueta = topo.etiqueta;
+    const capas = topo.capas.map((n, i) => i === 0 ? nEnt : n);
+    const actTopo = esTipoClasif ? 'relu' : 'tanh';
+    const m    = crearModelo(capas, actTopo, 0.05, 0, 1, 'xavier');
+    m.etiqueta = topo.id + ': ' + capas.join('→') + (topo.id === 'T3' ? ' ★' : '');
     m.color    = PALETAS.topologia[topo.id];
     m.topoId   = topo.id;
 
-    const grid = calcularGridPrediccion(m, 50);
-    m.frontera = calcularFrontera(grid, 50);
+    m.frontera = calcularFronteraModelo(m);
     modelos.push(m);
   }
 
@@ -54,7 +56,6 @@ function generarEnjambreTopologia() {
   }
 
   _actualizarContadorTopologia();
-  console.log('[Enjambre Topología] modelos:', modelos.map(m => m.etiqueta));
 }
 
 // ── 3. CONTROLES PANEL 3 (DOM) ────────────────────────────────────────────────

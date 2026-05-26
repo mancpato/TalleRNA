@@ -38,7 +38,7 @@ function generarEnjambreMomentum()
 {
   const betas = calcularBetasSecuencia(betaMinMom);
   modelos = betas.map((b) => {
-    let m = crearModelo([2, 4, 1], 'relu', 0.05, 0, 1, 'xavier', b);
+    let m = crearModelo([esTipoClasif ? 2 : 1, 4, 1], 'relu', 0.05, 0, 1, 'xavier', b);
     m.etiqueta = `β=${b.toFixed(1)}`;
     const t = b / BETA_MAX_MOM;
     m.color = lerpColor(PALETAS.momentum.azulClaro, PALETAS.momentum.naranjaOscuro, t);

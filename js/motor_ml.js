@@ -162,13 +162,20 @@ function generarDatos(problema, nivelRuido, trainRatio, semilla)
         y: 1
       });
     }
+  } else if (problema === 'cuadratica') {
+    const sigmaReg = nivelRuido * 0.01;
+    for (let i = 0; i < 200; i++) {
+      const x = rng.next() * 2 - 1; // x ∈ [-1, 1] uniforme
+      const y = x * x + rng.nextGaussian() * sigmaReg;
+      datos.push({ x: [x], y });
+    }
   } else if (problema === 'seno') {
-    /* for (let i = 0; i < 200; i++) {
-      const x1 = i / 199; 
-      const y_true = Math.sin(2 * Math.PI * x1);
-      const y = y_true + rng.nextGaussian() * sigma;
-      datos.push({ x: [x1], y: y });
-    } */
+    const sigmaReg = nivelRuido * 0.01;
+    for (let i = 0; i < 200; i++) {
+      const x = i / 199; // x ∈ [0, 1] uniforme
+      const y = Math.sin(2 * Math.PI * x) + rng.nextGaussian() * sigmaReg;
+      datos.push({ x: [x], y });
+    }
   }
 
   for (let i = datos.length - 1; i > 0; i--) {
@@ -180,7 +187,7 @@ function generarDatos(problema, nivelRuido, trainRatio, semilla)
   const datosTrain = datos.slice(0, trainCount);
   const datosTest  = datos.slice(trainCount);
 
-  esTipoClasif = (problema !== 'seno'); 
+  esTipoClasif = (problema !== 'seno' && problema !== 'cuadratica');
   return { datosTrain, datosTest };
 }
 
@@ -598,24 +605,31 @@ function verificarConvergencia(modelo)
   const J_actual   = h[h.length - 1].J_train;
   const J_anterior = h[h.length - 2].J_train;
 
-  const cond1 = Math.abs(J_actual - J_anterior) < 1e-4;
-  if (cond1) 
+  const cond1 = esTipoClasif
+    ? Math.abs(J_actual - J_anterior) < 1e-4
+    : Math.abs(J_actual - J_anterior) / (J_anterior + 1e-8) < 1e-3;
+  if (cond1)
     modelo.contadorConv++;
-  else 
+  else
     modelo.contadorConv = 0;
 
-  if (modelo.contadorConv < 30) 
+  if (modelo.contadorConv < 30)
     return false;
+
+  // Regresión: solo estabilidad de |ΔJ| durante 30 épocas — sin exigir
+  // reducción porcentual, ya que el baseline MSE puede ser alto para
+  // arquitecturas simples y el criterio sería imposible de cumplir.
+  if (!esTipoClasif)
+    return true;
 
   const J_inicial = h[0].J_train;
   const mejora = (J_inicial - J_actual) / (J_inicial + 1e-8);
-  if (mejora < 0.15) 
+  if (mejora < 0.15)
     return false;
 
   const ultimoH = h[h.length - 1];
   const J_test_final = ultimoH.J_test ?? Infinity;
-  const baseline = esTipoClasif ? 0.693 : J_inicial;
-  const calidadOK = J_test_final < baseline * 0.50;
+  const calidadOK = J_test_final < 0.693 * 0.50;
 
   return calidadOK;
 }

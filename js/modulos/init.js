@@ -41,13 +41,11 @@ function generarEnjambreInit() {
     (semillaDatos * 6271 + 1) % 99991,
     (semillaDatos * 7919 + 1) % 99991
   ];
-  console.log('[generarEnjambre] semillaDatos=', semillaDatos,
-    'SEMILLAS_INIT calculado=', SEMILLAS_INIT);
   _actualizarDisplaySemillas();
 
   for (const dist of distActivas) {
     for (let s = 1; s <= semillasPorDist; s++) {
-      const m   = crearModelo([2, 4, 1], 'relu', 0.05, 0, SEMILLAS_INIT[s - 1], dist);
+      const m   = crearModelo([esTipoClasif ? 2 : 1, 4, 1], 'relu', 0.05, 0, SEMILLAS_INIT[s - 1], dist);
       const hex  = COLORES_INIT[dist];
       const alfa = OPACIDADES_INIT[s - 1];
       m.color    = color(
@@ -57,8 +55,7 @@ function generarEnjambreInit() {
         alfa
       );
       m.etiqueta = `${dist}·${'ABC'[s - 1]}`;
-      const grid = calcularGridPrediccion(m, 50);
-      m.frontera = calcularFrontera(grid, 50);
+      m.frontera = calcularFronteraModelo(m);
       modelos.push(m);
     }
   }
@@ -68,8 +65,6 @@ function generarEnjambreInit() {
     modeloMapa = modelos[0];
     renderizarMapa(modelos[0]);
   }
-  console.log('[Enjambre Init] modelos:', modelos.length,
-    modelos.map(m => m.etiqueta));
 }
 
 // ── 3. CONTROLES PANEL 3 (DOM) ────────────────────────────────────────────────

@@ -55,15 +55,14 @@ function generarEnjambreEta(etaMin, etaMax) {
 
   for (let i = 0; i < N; i++) {
     const eta_i = etas[i];
-    const m = crearModelo([2, 4, 1], 'relu', eta_i, 0, 1, 'xavier');
+    const m = crearModelo([esTipoClasif ? 2 : 1, 4, 1], 'relu', eta_i, 0, 1, 'xavier');
     m.id       = i;
     m.etiqueta = `η=${eta_i.toFixed(3)}`;
 
     const t = N === 1 ? 0 : i / (N - 1);
     m.color = lerpColor(PALETAS.eta.azulVioleta, PALETAS.eta.naranja, t);
 
-    const grid = calcularGridPrediccion(m, 50);
-    m.frontera = calcularFrontera(grid, 50);
+    m.frontera = calcularFronteraModelo(m);
     modelos.push(m);
   }
 
