@@ -285,11 +285,14 @@ function dibujarCirculosInit(r3) {
 
       if (m.historial && m.historial.length > 0) {
         const ult = m.historial[m.historial.length - 1];
-        if (ult.accuracy_test !== undefined && ult.accuracy_test !== null) {
+        noStroke(); textSize(10); textAlign(CENTER, BOTTOM);
+        if (esTipoClasif && ult.accuracy_test !== undefined && ult.accuracy_test !== null) {
           const acc = ult.accuracy_test;
           fill(acc > 0.75 ? color(46, 180, 90) : acc > 0.50 ? color(200, 160, 0) : color(160));
-          noStroke(); textSize(10); textAlign(CENTER, BOTTOM);
           text((acc * 100).toFixed(0) + '%', cx, cirY - DIAM / 2 - 2);
+        } else if (!esTipoClasif && ult.J_test !== undefined) {
+          fill(120);
+          text(ult.J_test.toFixed(4), cx, cirY - DIAM / 2 - 2);
         }
       }
 
@@ -297,5 +300,12 @@ function dibujarCirculosInit(r3) {
       text('s' + (s + 1), cx, cirY + DIAM / 2 + 5);
     }
     gx += anchoGrupo + SEP_G;
+  }
+
+  // Etiqueta "J=" fija a la izquierda de la fila de valores, solo en regresión
+  if (!esTipoClasif && modelos.some(m => m.historial && m.historial.length > 0)) {
+    const _x0 = r3.x + (r3.w - anchoTotal) / 2;
+    noStroke(); fill(100); textSize(12); textAlign(RIGHT, BOTTOM);
+    text('J =', _x0 - DIAM / 2 - 18, cirY - DIAM / 2 - 2);
   }
 }

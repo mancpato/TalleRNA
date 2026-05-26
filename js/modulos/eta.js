@@ -219,7 +219,7 @@ function dibujarCirculosEta(r3) {
         const acc = ultimo.accuracy_test;
         fill(acc > 0.75 ? color(46, 180, 90) : acc > 0.50 ? color(200, 160, 0) : color(160));
       } else if (ultimo.J_test !== undefined) {
-        metrica = 'J=' + ultimo.J_test.toFixed(3); fill(120);
+        metrica = ultimo.J_test.toFixed(4); fill(120);
       } else { metrica = ''; fill(120); }
       if (metrica) text(metrica, cx, cirY - DIAM / 2 - 8);
     }
@@ -231,5 +231,11 @@ function dibujarCirculosEta(r3) {
       textAlign(CENTER, TOP);
     }
     text(m.eta.toFixed(3), cx, cirY + DIAM / 2 + 6);
+  }
+
+  // Etiqueta "J=" fija a la izquierda de la fila de valores, solo en regresión
+  if (!esTipoClasif && modelos.some(m => m.historial && m.historial.length > 0)) {
+    noStroke(); fill(100); textSize(12); textAlign(RIGHT, BOTTOM);
+    text('J =', cirX0 - DIAM / 2 - 18, cirY - DIAM / 2 - 2);
   }
 }

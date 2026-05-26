@@ -163,14 +163,14 @@ function generarDatos(problema, nivelRuido, trainRatio, semilla)
       });
     }
   } else if (problema === 'cuadratica') {
-    const sigmaReg = nivelRuido * 0.01;
+    const sigmaReg = nivelRuido * 0.1;
     for (let i = 0; i < 200; i++) {
       const x = rng.next() * 2 - 1; // x ∈ [-1, 1] uniforme
       const y = x * x + rng.nextGaussian() * sigmaReg;
       datos.push({ x: [x], y });
     }
   } else if (problema === 'seno') {
-    const sigmaReg = nivelRuido * 0.01;
+    const sigmaReg = nivelRuido * 0.1;
     for (let i = 0; i < 200; i++) {
       const x = i / 199; // x ∈ [0, 1] uniforme
       const y = Math.sin(2 * Math.PI * x) + rng.nextGaussian() * sigmaReg;
