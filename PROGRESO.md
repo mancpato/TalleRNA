@@ -1,6 +1,6 @@
 # PROGRESO: TalleRNA
 
-**Última actualización**: 2026-05-26
+**Última actualización**: 2026-05-27
 **Etapa actual**: Polish / fit and finish
 **Estado general**: Etapas 0–3 completas. Módulos Eta, Init, Activación, Momentum y
 Topología operativos. Panel 2 con eje X dinámico. Panel 4 con visualización de red
@@ -136,6 +136,13 @@ Dos nuevos problemas de regresión agregados al selector, después de Espiral:
 - Todos los módulos usan `esTipoClasif ? 2 : 1` para la primera capa al crear modelos.
 - `calcularFronteraModelo(m)` unifica la lógica: frontera binaria en clasificación, curva de regresión en regresión.
 
+### Polish regresión y detalles de interfaz — 2026-05-27
+
+- Formato de métrica unificado en Panel 3 para regresión: etiqueta "J=" fija a la izquierda de la fila, valor numérico con 4 decimales sin prefijo sobre cada círculo. Aplicado a todos los módulos (Topología, Activación, Inicialización, Tasa de aprendizaje, Momentum).
+- Botón de semilla: ícono reemplazado por dado 🎲 más elocuente.
+- Panel 2 modo Log: corregido "0.0e+0" y "1.0e-8" en etiqueta del origen — ahora muestra "0".
+- Aviso en módulo Topología cuando el problema es regresión: "⚠ Regresión: primera capa reducida a 1 entrada".
+
 ### Polish / Fit and finish — 2026-05-22 ✅
 
 Ronda de refinamiento de usabilidad y coherencia visual.
@@ -259,15 +266,18 @@ Ningún cambio afecta la lógica de entrenamiento.
   para garantizar que el mapeo época→píxel sea idéntico en cada frame.
 - **LAYOUT_RED**: lookup table con posiciones normalizadas para las 6
   arquitecturas de topología; fallback dinámico para otras arquitecturas.
+- **Dropout descartado como módulo independiente**: requiere redes más grandes para mostrar utilidad. Se reserva para el módulo experimental.
+- **Clasificación multiclase (softmax + CCE)**: será una página HTML standalone separada, misma estética que TalleRNA. Motor nuevo, visualización Panel 1 con K regiones de color.
+- **Módulo experimental**: pendiente de especificación formal. Candidatos discutidos: barrido de hiperparámetros con barra de progreso y tabla de resultados parciales, dropout, clasificación multiclase integrada.
 
 ---
 
 ## PENDIENTE
 
 | Componente | Prioridad | Notas |
-|------------|-----------|-------|
-| Nota mínimo local en Panel 4 | 🟡 | Mostrar aviso cuando J_test > 0.10 en regresión convergida |
-| Módulo Dropout | 🟡 | Pendiente de implementar |
-| Panel 4 completo | 🟠 | Tabla por modelo |
+|---|---|---|
+| Módulo experimental | 🟡 | Ver TalleRNAspec_ModuloExperimental.md |
+| Clasificación multiclase | 🟡 | Página standalone, softmax + CCE, datasets de sectores y espiral 3 clases |
+| Nota mínimo local Panel 4 | 🟡 | Aviso cuando J_test > 0.10 en regresión convergida |
+| Panel 4 tabla de ranking | 🟠 | Visible solo en CONVERGED |
 | Símbolo ✕ modelos divergentes | 🟡 | Cruz sobre posición en Panel 1 |
-| Tiempo/costo por arquitectura | 🔵 | Diferido a módulo experimental |
