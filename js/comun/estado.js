@@ -127,7 +127,6 @@ function initEnjambre() {
   else if (moduloActivo === 'init')       generarEnjambreInit();
   else if (moduloActivo === 'activacion') generarEnjambreActivacion();
   else if (moduloActivo === 'momentum')   generarEnjambreMomentum();
-  else if (moduloActivo === 'dropout')    generarEnjambreDropout();
   else if (moduloActivo === 'topologia')  generarEnjambreTopologia();
 }
 
@@ -138,7 +137,6 @@ function dibujarControlesPanel3() {
   else if (moduloActivo === 'init')       dibujarCirculosInit(r3);
   else if (moduloActivo === 'activacion') dibujarCirculosActivacion(r3);
   else if (moduloActivo === 'momentum')   dibujarCirculosMomentum(r3);
-  else if (moduloActivo === 'dropout')    dibujarCirculosDropout(r3);
   else if (moduloActivo === 'topologia')  dibujarCirculosTopologia(r3);
 }
 
@@ -174,14 +172,13 @@ function crearOverlayPanel3() {
   crearSeccionOverlayInit();
   crearSeccionOverlayActivacion();
   crearSeccionOverlayMomentum();
-  crearSeccionOverlayDropout();
   crearSeccionOverlayTopologia();
 
   posicionarOverlayPanel3();
 }
 
 function actualizarModuloOverlay() {
-  ['topologia', 'activacion', 'init', 'eta', 'momentum', 'dropout'].forEach(mod => {
+  ['topologia', 'activacion', 'init', 'eta', 'momentum'].forEach(mod => {
     const div = document.getElementById(`controles-${mod}`);
     if (div) div.style.display = moduloActivo === mod ? 'block' : 'none';
   });
@@ -223,6 +220,5 @@ function actualizarUIEstado() {
   actualizarUIEstadoInit();
   actualizarUIEstadoActivacion();
   actualizarUIEstadoMomentum();
-  actualizarUIEstadoDropout();
   actualizarUIEstadoTopologia();
 }

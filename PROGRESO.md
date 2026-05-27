@@ -1,12 +1,10 @@
 # PROGRESO: TalleRNA
 
 **Última actualización**: 2026-05-27
-**Etapa actual**: Polish / fit and finish
+**Etapa actual**: Módulo Experimental — Etapa 0 pendiente
 **Estado general**: Etapas 0–3 completas. Módulos Eta, Init, Activación, Momentum y
-Topología operativos. Panel 2 con eje X dinámico. Panel 4 con visualización de red
-adaptable a cualquier arquitectura. Interfaz reorganizada: pestañas arriba, barra abajo,
-logo integrado. La interfaz fue sometida a una ronda de refinamiento de usabilidad
-y coherencia visual.
+Topología operativos. Módulo Experimental en preparación: plan v2.0 listo
+(draw() loop, sin Web Workers), spec v1.1 actualizada.
 
 ---
 
@@ -269,6 +267,29 @@ Ningún cambio afecta la lógica de entrenamiento.
 - **Dropout descartado como módulo independiente**: requiere redes más grandes para mostrar utilidad. Se reserva para el módulo experimental.
 - **Clasificación multiclase (softmax + CCE)**: será una página HTML standalone separada, misma estética que TalleRNA. Motor nuevo, visualización Panel 1 con K regiones de color.
 - **Módulo experimental**: pendiente de especificación formal. Candidatos discutidos: barrido de hiperparámetros con barra de progreso y tabla de resultados parciales, dropout, clasificación multiclase integrada.
+- **Dropout eliminado de TalleRNA**: no se implementa como módulo
+  independiente ni como eje del módulo experimental. Las redes de
+  TalleRNA (máx. 2→4→4→1, 37 parámetros) son demasiado pequeñas
+  para mostrar el efecto regularizador de forma visible y
+  pedagógicamente honesta. El código de inverted dropout en
+  motor_ml.js se conserva sin cambios para uso futuro.
+- **Dropout asignado a página multiclase**: se implementará como
+  módulo propio en la página standalone de clasificación multiclase,
+  donde las redes más grandes y los datasets de 3+ clases producen
+  sobreajuste observable.
+- **Módulo experimental — hiperparámetros disponibles**: η (escala
+  log), momentum β (escala lineal), topología (ordinal T0–T7),
+  activación (categórico). Cuatro pares curados: η×activación,
+  η×topología, η×momentum β, topología×momentum β.
+- **Módulo experimental — arquitectura final**: draw() loop
+  secuencial en lugar de Web Workers. Los workers requieren
+  servidor HTTP; TalleRNA opera desde file://. El heatmap se
+  colorea celda por celda conforme cada run termina.
+  Pausa/reanudación implementada como toggle de expEstado
+  en la condición de stepExperimento() dentro de draw().
+- **Web Workers descartados**: SecurityError al intentar
+  construir Worker desde origen null (file://). Decisión
+  documentada el 2026-05-27.
 
 ---
 
@@ -276,7 +297,7 @@ Ningún cambio afecta la lógica de entrenamiento.
 
 | Componente | Prioridad | Notas |
 |---|---|---|
-| Módulo experimental | 🟡 | Ver TalleRNAspec_ModuloExperimental.md |
+| Módulo experimental | 🔴 Inmediato | Plan v2.0: draw() loop, sin workers. 4 etapas + PAUSADO. Comenzar por Etapa 0. |
 | Clasificación multiclase | 🟡 | Página standalone, softmax + CCE, datasets de sectores y espiral 3 clases |
 | Nota mínimo local Panel 4 | 🟡 | Aviso cuando J_test > 0.10 en regresión convergida |
 | Panel 4 tabla de ranking | 🟠 | Visible solo en CONVERGED |

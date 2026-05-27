@@ -1,6 +1,6 @@
 # ESPECIFICACIÓN: Módulo Experimental
 ## TalleRNA — Módulo 6: Experimento Factorial de Dos Hiperparámetros
-**Versión 1.0** — Anexo a TalleRNAspec.md v1.1
+**Versión 1.1 — 2026-05-27** — Anexo a TalleRNAspec.md v1.1
 
 ---
 
@@ -14,7 +14,7 @@ resultado es una grilla 2D de métricas que revela interacciones no observables
 variando un solo hiperparámetro a la vez.
 
 **Pregunta pedagógica central**: el efecto de η no es independiente de
-dropout, activación o topología. Este módulo hace esa dependencia visible.
+activación, momentum o topología. Este módulo hace esa dependencia visible.
 
 **Diferencia operacional respecto a los módulos simples**: no existe control
 de velocidad, pausa ni avance por pasos. El experimento se lanza y corre hasta
@@ -35,13 +35,12 @@ La distinción de tipos determina la visualización válida en Panel 4.
 ### E2.1 Continuos numéricos
 
 El usuario define mínimo, máximo y número de pasos. Los valores se
-distribuyen uniformemente en escala lineal (dropout, momentum) o logarítmica
+distribuyen uniformemente en escala lineal (momentum) o logarítmica
 (η).
 
 | Hiperparámetro | Rango permitido | Escala | Default |
 |---|---|---|---|
 | η (tasa de aprendizaje) | [0.001, 0.50] | logarítmica | [0.01, 0.20], 4 pasos |
-| Dropout p | [0.0, 0.80] | lineal | [0.0, 0.40], 5 pasos |
 | Momentum β | [0.0, 0.99] | lineal | [0.0, 0.90], 4 pasos |
 
 Para continuos: el **heatmap 2D es la visualización correcta** en Panel 4.
@@ -87,11 +86,10 @@ pedagógica explícita visible en Panel 3:
 
 | Par | Pregunta pedagógica | Viz. Panel 4 |
 |---|---|---|
-| η × dropout | ¿Compensa regularizar si se sube la tasa? | Heatmap |
 | η × activación | ¿ReLU sigue ganando con η pequeña? | Barras agrupadas |
 | η × topología | ¿Una red más profunda necesita η más baja? | Heatmap |
 | η × momentum β | ¿Con β alto puedo usar η más pequeña? | Heatmap |
-| dropout × topología | ¿El dropout importa más en redes grandes? | Heatmap |
+| momentum β × topología | ¿El momentum importa más en redes grandes? | Heatmap |
 
 **Modo libre** — dos selectores independientes con todos los hiperparámetros
 disponibles. Restricciones:
@@ -186,7 +184,7 @@ en el motor actual.
 ExperimentRun {
   coordenada:    {i, j},                   // posición en la grilla
   hiper1:        {nombre, valor},          // ej. {nombre:'eta', valor:0.05}
-  hiper2:        {nombre, valor},          // ej. {nombre:'dropout', valor:0.2}
+  hiper2:        {nombre, valor},          // ej. {nombre:'momentum', valor:0.9}
   modelo:        ModeloRNA,                // objeto del motor matemático
   estado:        'pendiente'               // ver §E6.1
              | 'entrenando'
@@ -315,7 +313,7 @@ invierte automáticamente según la métrica seleccionada.
 
 **Tooltip** al hacer hover sobre celda:
 ```
-η = 0.05  dropout = 0.2
+η = 0.05  β = 0.6
 J_test:   0.142
 J_train:  0.118
 Gap:      0.024
@@ -392,23 +390,23 @@ Panel 3 tiene dos fases: **Configuración** (antes de iniciar) y
 [ Iniciar experimento ]
 
 Par de hiperparámetros:
-[ η × dropout ▾ ]   ← menú desplegable (§E3.1)
+[ η × momentum β ▾ ]   ← menú desplegable (§E3.1)
 
 ── Hiperparámetro 1: η ──────────────────────────────────────
   Mín: [0.01]   Máx: [0.20]   Pasos: [ 4 ▾ ] (2–7)
   Valores: 0.010 · 0.077 · 0.143 · 0.210
 
-── Hiperparámetro 2: dropout ────────────────────────────────
-  Mín: [0.0]    Máx: [0.40]   Pasos: [ 5 ▾ ] (2–7)
-  Valores: 0.0 · 0.1 · 0.2 · 0.3 · 0.4
+── Hiperparámetro 2: momentum β ─────────────────────────────
+  Mín: [0.0]    Máx: [0.90]   Pasos: [ 4 ▾ ] (2–7)
+  Valores: 0.0 · 0.3 · 0.6 · 0.9
 
 ── Configuración general ────────────────────────────────────
   Épocas máx.:  [200]
   Semilla pesos: [1]   (misma para todos los modelos)
-  Total modelos: 20
+  Total modelos: 16
 
 ── Pregunta pedagógica ──────────────────────────────────────
-  "¿Compensa regularizar más si se sube la tasa de aprendizaje?"
+  "¿Con β alto puedo usar η más pequeña y aun así converger?"
   (texto fijo por par curado; vacío en modo libre)
 ```
 
@@ -423,16 +421,13 @@ mín/máx/pasos se reemplazan por checkboxes de los valores disponibles.
 Al presionar "Iniciar experimento", Panel 3 cambia completamente:
 
 ```
-[ Cancelar ]
+[ Pausar / Reanudar ]    [ Cancelar ]
 
 Progreso global:
 ████████████░░░░░░░░░░  12 / 20 modelos
 
-Workers activos:
-  W1: η=0.05  dp=0.2  → época 143/200
-  W2: η=0.10  dp=0.2  → época  89/200
-  W3: η=0.15  dp=0.1  → convergido ✓  (J_test=0.142, 67 ép.)
-  W4: η=0.20  dp=0.0  → divergente ✗
+En curso:
+  η=0.05 · β=0.6  →  época 143 / 200
 
 Completados:
   ✓ convergidos:    8
@@ -441,8 +436,11 @@ Completados:
   ⏳ pendientes:    8
 ```
 
-La sección "Workers activos" se actualiza en tiempo real por mensajes de
-los workers. La sección "Completados" acumula al terminar cada run.
+El botón alterna entre "Pausar" (EJECUTANDO) y "Reanudar" (PAUSADO).
+"Cancelar" disponible en ambos estados.
+
+La sección "En curso" se actualiza en cada frame desde `draw()`.
+La sección "Completados" acumula al terminar cada run.
 
 ### E11.3 Botón de exportación CSV
 
@@ -450,7 +448,7 @@ Aparece en Panel 3 al completar el experimento (todos los runs en estado
 terminal). Si el usuario canceló, aparece igualmente con los runs completados.
 
 ```
-[ Exportar CSV ]   tallerna_eta-dropout_20260518-1430.csv
+[ Exportar CSV ]   tallerna_eta-momentum_20260518-1430.csv
 ```
 
 ---
@@ -466,16 +464,16 @@ terminal). Si el usuario canceló, aparece igualmente con los runs completados.
 # Problema: espiral   Ruido: 15%   Train: 80%   Semilla datos: 4721
 # Semilla pesos: 1  (misma para todos los modelos)
 # Hiper 1: eta      escala: logarítmica   rango: [0.010, 0.200]   pasos: 4
-# Hiper 2: dropout  escala: lineal        rango: [0.0, 0.4]       pasos: 5
-# Total modelos: 20   Workers: 4   Épocas máx.: 200
-# Tiempo total experimento: 18432 ms
+# Hiper 2: momentum  escala: lineal        rango: [0.0, 0.9]       pasos: 4
+# Total modelos: 16   Workers: 4   Épocas máx.: 200
+# Tiempo total experimento: 14832 ms
 #
-eta,dropout,J_train,J_test,accuracy,epocas,gap,estado,tiempo_ms
+eta,momentum,J_train,J_test,accuracy,epocas,gap,estado,tiempo_ms
 0.010,0.000,0.412,0.418,71.2,200,,max_epocas,842
-0.010,0.100,0.380,0.385,73.5,200,,max_epocas,819
-0.010,0.200,0.371,0.374,74.1,200,,max_epocas,834
-0.077,0.200,0.191,0.194,84.1,67,0.003,convergido,312
-0.200,0.300,,,,,divergente,41
+0.010,0.300,0.380,0.385,73.5,200,,max_epocas,819
+0.010,0.600,0.371,0.374,74.1,200,,max_epocas,834
+0.077,0.600,0.191,0.194,84.1,67,0.003,convergido,312
+0.200,0.900,,,,,divergente,41
 ```
 
 **Notas sobre el formato**:
@@ -494,9 +492,9 @@ tallerna_{hiper1}-{hiper2}_{YYYYMMDD}-{HHMM}.csv
 
 Ejemplos:
 ```
-tallerna_eta-dropout_20260518-1430.csv
+tallerna_eta-momentum_20260518-1430.csv
 tallerna_eta-activacion_20260518-1517.csv
-tallerna_dropout-topologia_20260518-1602.csv
+tallerna_eta-topologia_20260518-1602.csv
 ```
 
 Para modo libre con orden arbitrario, el primer hiperparámetro en el nombre
@@ -510,17 +508,22 @@ El módulo experimental tiene su propia máquina de estados, independiente
 de la máquina global de TalleRNA:
 
 ```
-CONFIGURANDO  →  EJECUTANDO  →  COMPLETADO
-                     ↓
-                 CANCELADO
+CONFIGURANDO  →  EJECUTANDO  ⇄  PAUSADO  →  COMPLETADO
+                     ↓              ↓
+                 CANCELADO      CANCELADO
 ```
 
 **CONFIGURANDO**: Panel 3 muestra formulario de configuración. Todos los
 controles habilitados. Botón "Iniciar experimento" activo.
 
-**EJECUTANDO**: Panel 3 muestra barra de progreso y estado de workers.
-Único control disponible: "Cancelar". Heatmap se actualiza en tiempo real
+**EJECUTANDO**: Panel 3 muestra barra de progreso y estado del run en curso.
+Controles disponibles: "Pausar" y "Cancelar". Heatmap se actualiza en tiempo real
 con los runs completados.
+
+**PAUSADO**: experimento suspendido por el usuario. El run en curso
+conserva su modelo e historial en memoria. El heatmap se sigue
+dibujando con el estado actual. Controles disponibles: "Reanudar"
+y "Cancelar".
 
 **COMPLETADO**: todos los runs en estado terminal. Panel 4 muestra heatmap
 completo. Panel 3 muestra resumen y botón "Exportar CSV". Botón "Nuevo
@@ -538,7 +541,6 @@ completaron y ofrece "Exportar CSV parcial" y "Nuevo experimento".
 | Parámetro | Límite | Acción si se excede |
 |---|---|---|
 | η máximo | 0.50 | Clamp silencioso al límite |
-| dropout máximo | 0.80 | Clamp silencioso al límite |
 | momentum máximo | 0.99 | Clamp silencioso al límite |
 | Pasos por eje | 7 | UI no permite más |
 | Total modelos | 49 (7×7) | UI no permite más |
@@ -614,7 +616,7 @@ El archivo sigue el mismo patrón de 4 secciones que los otros módulos:
 ```javascript
 // ══════════════════════════════════════════════════════════════════════
 // MÓDULO: EXPERIMENTO FACTORIAL
-// Variable 1: configurable (η, dropout, momentum, activación, topología)
+// Variable 1: configurable (η, momentum, activación, topología)
 // Variable 2: configurable (ídem, distinto al primero)
 // ══════════════════════════════════════════════════════════════════════
 
@@ -653,26 +655,3 @@ Lo siguiente está documentado pero no se implementa:
 Estas extensiones corresponden al **Módulo Experimental Avanzado**, que es
 una aplicación independiente con servidor y GPU opcional.
 
----
-
-## Módulo experimental — Dropout
-
-Variable: tasa de dropout p ∈ {0.0, 0.1, 0.2, 0.3, 0.4, 0.5} (6 modelos fijos).
-
-Red recomendada: 2→4→4→1 (en lugar de la red base 2→4→1).
-Justificación: con 2→4→1 (17 parámetros) y 160 puntos de entrenamiento la razón
-datos/parámetros es ~10:1 y el sobreajuste raramente aparece, haciendo invisible el
-efecto regularizador del dropout. Con 2→4→4→1 (37 parámetros) y problema Espiral con
-ruido ≥ 15 la brecha J_train/J_test sin dropout es observable, y dropout la reduce
-progresivamente hasta que p=0.5 degrada el aprendizaje — el fenómeno pedagógico completo.
-
-Implementación: inverted dropout ya está en motor_ml.js.
-Solo falta el UI del Panel 3 y generarEnjambreDropout().
-
-Esquema de color (del §11.5 de la spec principal):
-```
-t = p / 0.5
-color = lerpColor(naranja_oscuro, azul, t)
-naranja_oscuro = hsl(20, 80%, 40%)
-azul           = hsl(210, 70%, 45%)
-```
