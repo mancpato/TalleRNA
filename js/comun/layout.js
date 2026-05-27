@@ -166,7 +166,7 @@ function crearOverlayBarra() {
       <input type="number" id="input-semilla-global" min="1" max="99999" step="1"
         style="width:64px;font-size:12px;text-align:center" value="${semillaDatos}">
     </label>
-    <button id="btn-semilla">⚄</button>
+    <button id="btn-semilla">🎲</button>
   `;
   document.body.appendChild(div);
 
