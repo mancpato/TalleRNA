@@ -1,0 +1,52 @@
+name: Sync to public repo
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - 'README.md'
+      - 'css/**'
+      - 'js/**'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+
+      - name: Clone public repo
+        env:
+          TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${TOKEN}@github.com/mancpato/Taller-RNA.git" public_repo
+
+      - name: Clear public repo contents
+        run: |
+          find public_repo -mindepth 1 -not -path 'public_repo/.git' -not -path 'public_repo/.git/*' -delete
+
+      - name: Copy files to public repo
+        run: |
+          cp index.html public_repo/
+          cp README.md public_repo/ 2>/dev/null || true
+          cp -r css public_repo/
+          cp -r js public_repo/
+
+      - name: Commit and push if changed
+        env:
+          TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+          cd public_repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to sync."
+          else
+            SHORT_SHA="${{ github.sha }}"
+            git commit -m "sync: ${SHORT_SHA:0:7}"
+            git push "https://x-access-token:${TOKEN}@github.com/mancpato/Taller-RNA.git" HEAD:main
+          fi
