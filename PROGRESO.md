@@ -1,10 +1,10 @@
 # PROGRESO: TalleRNA
 
-**Última actualización**: 2026-05-27
-**Etapa actual**: Módulo Experimental — Etapa 0 pendiente
+**Última actualización**: 2026-06-03
+**Etapa actual**: Módulo Experimental — Etapas 0–3 completadas, pendiente verificación M4
 **Estado general**: Etapas 0–3 completas. Módulos Eta, Init, Activación, Momentum y
-Topología operativos. Módulo Experimental en preparación: plan v2.0 listo
-(draw() loop, sin Web Workers), spec v1.1 actualizada.
+Topología operativos. Módulo Experimental integrado y funcional: heatmap viridis,
+barras agrupadas, tooltip Panel 4, curvas + métricas Panel 2, frontera Panel 1.
 
 ---
 
@@ -293,11 +293,46 @@ Ningún cambio afecta la lógica de entrenamiento.
 
 ---
 
+### Módulo Experimental — Etapas 0–3 ✅ (2026-06-03)
+
+**Integración con el resto de la app:**
+- Pestaña "Experimento" en barra superior; texto de arquitectura dinámico en barra global.
+- `estado.js`: `initEnjambre`, `dibujarControlesPanel3`, `crearOverlayPanel3`,
+  `actualizarModuloOverlay`, `actualizarUIEstado` conectados al módulo.
+- `eventos.js`: tab click, `expHandleMousePressed`, `expHandleMouseMoved`.
+- `panel1.js`, `panel2.js`, `panel4.js`, `main.js`: routing por `moduloActivo`.
+
+**Funcionalidad verificada (M1–M3):**
+- Overlay Panel 3 compacto: fila única botón + épocas + semilla + total,
+  hiperparámetros H1/H2 en columnas 50/50, pregunta pedagógica en una línea.
+- Heatmap viridis en Panel 4 con selector de métrica DOM, tooltip al hacer hover,
+  selección de fila/columna con borde azul.
+- Barras agrupadas para pares con eje categórico; hit-test propio
+  (`_expHitTestBarras`) conectado a hover y click.
+- Panel 1: frontera/curva del run activo (hover > selección > mejor J_test).
+- Panel 2: curva J_train/J_test del run seleccionado + métricas fijas (texto
+  alineado derecha) cuando `expSel` está activo. Ejes X/Y con etiquetas.
+- Mensaje de completado incluye tiempo total formateado como "Xm Ys".
+- Exportación CSV con cabecera completa; botón en fase completado y cancelado.
+- Pausa/reanudación (`expEstado` toggle); cancelación con limpieza de cola.
+
+**Bugs corregidos en experimento.js:**
+
+| Bug | Descripción |
+|-----|-------------|
+| Bexp1 | `stepExperimento()` leía `run.historial` (vacío) en lugar de `run.modelo.historial` |
+| Bexp2 | `finalizarRun()` calculaba métricas desde `run.historial` (vacío) — añadido bloque corrector desde `run.modelo.historial` |
+| Bexp3 | `dibujarCurvasExperimentoPanel2()` usaba `run.historial` en filtro, xMax y loops de dibujo |
+| Bexp4 | `expHandleMouseMoved/Pressed` ignoraban barras agrupadas (`expUsaBarras`) |
+
+---
+
 ## PENDIENTE
 
 | Componente | Prioridad | Notas |
 |---|---|---|
-| Módulo experimental | 🔴 Inmediato | Plan v2.0: draw() loop, sin workers. 4 etapas + PAUSADO. Comenzar por Etapa 0. |
+| Módulo experimental — M4 | 🔴 | Prueba completa end-to-end; verificar exportación CSV con datos reales |
+| Leyenda barras agrupadas | 🟡 | Desplazamiento a la izquierda aún visible en algunas resoluciones; fix aplicado, pendiente verificación |
 | Clasificación multiclase | 🟡 | Página standalone, softmax + CCE, datasets de sectores y espiral 3 clases |
 | Nota mínimo local Panel 4 | 🟡 | Aviso cuando J_test > 0.10 en regresión convergida |
 | Panel 4 tabla de ranking | 🟠 | Visible solo en CONVERGED |
