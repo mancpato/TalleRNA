@@ -3,29 +3,5 @@
 # Archivos específicos
 PROPUESTA_MODULARIZACION.md
 PROPUESTA_MODULARIZACION.pdf
-split/*.*
-split/css
-split/css/*.*
-split/js
-split/js/*.*
-
-# Sistema operativo
-.DS_Store
-Thumbs.db
+test/*.*
 desktop.ini
-
-# Editores
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Node (por si acaso)
-node_modules/
-
-# Archivos temporales
-*.tmp
-*.bak
-*.orig
-*.zip
